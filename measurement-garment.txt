@@ -1,0 +1,9 @@
+top_total_length_cm: 55
+top_shoulder_width_cm: 35
+top_chest_width_cm: 47
+top_sleeve_length_cm: 0
+
+bottom_total_length_cm: 80
+bottom_waist_cm: 68
+bottom_hip_cm: 94
+bottom_thigh_width_cm: 52

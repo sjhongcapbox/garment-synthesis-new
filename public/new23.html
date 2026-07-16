@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>피팅샷 v2.3 에디터</title>
+<style>
+  :root {
+    --bg: #fdf7fb;
+    --panel: #ffffff;
+    --header-from: #ffe1ec;
+    --header-to: #e0f2ff;
+    --border: #f0dce8;
+    --text: #5b5568;
+    --text-dim: #a89bb0;
+    --accent: #c4b5fd;
+    --accent-hover: #a78bfa;
+    --accent-text: #4c1d95;
+    --secondary: #fde4f0;
+    --secondary-hover: #fbcfe4;
+    --secondary-text: #9d174d;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+  header { padding: 16px 22px; background: linear-gradient(120deg, var(--header-from), var(--header-to)); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; color: #6d5b8a; }
+  header .navLink { font-size: 11px; color: #9d174d; text-decoration: none; font-weight: 700; background: var(--secondary); padding: 4px 10px; border-radius: 8px; }
+  header .navLink:hover { background: var(--secondary-hover); }
+  /* 상의/하의 모드 ↔ 원피스 모드 (별개의 모드) */
+  .modeToggle { display: flex; flex-direction: column; gap: 4px; background: var(--secondary); border-radius: 9px; padding: 3px; }
+  .modeToggle button { background: transparent; color: var(--secondary-text); box-shadow: none; padding: 6px 12px; font-size: 12px; }
+  .modeToggle button.active { background: #fff; box-shadow: 0 1px 4px rgba(157,23,77,0.2); }
+  #separateUpload, #dressUpload { display: contents; }
+  body.mode-dress #separateUpload { display: none; }
+  body.mode-separate #dressUpload { display: none; }
+  body.mode-dress #separateSpecs { display: none; }
+  body.mode-separate #dressSpecs { display: none; }
+  body.mode-dress #bottomElapsed { display: none; }
+  .upload { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+  .upload label { font-size: 12px; color: #7c6f8f; display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+  input[type=file] { color: var(--text); font-size: 12px; max-width: 160px; }
+  .thumb { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(150,120,160,0.25); display: none; background: #f5eef7; }
+  .thumb.show { display: block; }
+  button { background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; padding: 10px 18px; font-size: 13px; cursor: pointer; font-weight: 700; box-shadow: 0 2px 6px rgba(167,139,250,0.35); transition: background 0.15s, transform 0.1s; }
+  button:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+  button:disabled { background: #e9e3ee; color: #b6acc2; box-shadow: none; cursor: not-allowed; }
+  /* 생성 모델 다중 선택 그리드 */
+  .enginePicker { margin-bottom: 12px; }
+  .engineHead { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; color: #7c6f8f; margin-bottom: 6px; }
+  .tinyBtn { background: var(--secondary); color: var(--secondary-text); border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: none; }
+  .tinyBtn:hover { background: var(--secondary-hover); }
+  .engineChecks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 10px; }
+  .engineChecks label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #6d5b8a; cursor: pointer; padding: 3px 0; }
+  .engineChecks input { accent-color: var(--accent-hover); }
+  /* 분석 모델 — 한 줄 라디오 나열 */
+  .analysisModelRow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 12px; }
+  .analysisModelLabel { font-size: 11px; font-weight: 700; color: #7c6f8f; }
+  .analysisModelRow label { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #6d5b8a; cursor: pointer; }
+  .analysisModelRow input { accent-color: var(--accent-hover); }
+  .noInstrToggle { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--secondary-text); cursor: pointer; }
+  .noInstrToggle input { accent-color: var(--accent-hover); }
+  button.secondary { background: var(--secondary); color: var(--secondary-text); box-shadow: 0 2px 6px rgba(251,207,228,0.5); }
+  button.secondary:hover:not(:disabled) { background: var(--secondary-hover); }
+  main { display: flex; gap: 18px; padding: 18px 22px; align-items: flex-start; }
+  /* 1 모델 | 2 옷 (좌우), 그 아래 3 지시사항, 4 피팅샷 생성 (가로 전체) */
+  /* 옷 패널은 상의/하의 두 벌이 들어가므로 모델 패널의 2배 폭 */
+  .workColumn { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; align-items: start; }
+  .panelWide { grid-column: 1 / -1; }
+  /* 3 지시사항 | 4 피팅샷 생성 을 한 줄에. 지시사항 폭은 위쪽 모델 체형 분석과 동일(360px). */
+  .bottomRow { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; align-items: start; }
+  /* 아주 좁은 창에서만 세로로 접습니다. */
+  @media (max-width: 900px) {
+    .workColumn { grid-template-columns: 1fr; }
+    .specGrid { grid-template-columns: 1fr; }
+    .bottomRow { grid-template-columns: 1fr; }
+  }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(180,150,190,0.12); }
+  .panel h2 { font-size: 14px; color: #6d5b8a; margin: 0 0 4px; font-weight: 700; }
+  .panel .stepNum { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: 12px; margin-right: 7px; }
+  .hint { font-size: 11px; color: var(--text-dim); margin: 4px 0 12px; line-height: 1.6; }
+  .panelActions { margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  /* 버튼을 누른 시점부터의 소요 시간(진행 중에는 실시간, 끝나면 최종값) */
+  .elapsed { font-size: 11px; font-weight: 700; color: #8b7aa8; background: #f6eefa; border: 1px solid var(--border); border-radius: 7px; padding: 4px 8px; }
+  .elapsed:empty { display: none; }
+  .elapsed.running { color: #9d174d; background: var(--secondary); }
+  .elapsed.failed { color: #c0392b; background: #fdeaea; border-color: #f5c6c6; }
+  /* 옷 실측: 왼쪽 상의 / 오른쪽 하의 */
+  /* 상의 | 하의 를 항상 좌우로 (칸은 남는 폭을 반씩 나눠 가집니다) */
+  .specGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .specBox { min-width: 0; }
+  /* 모델 신체 실측 항목은 한 줄에 하나씩(1열) */
+  .modelRows { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .modelRows .specRow { margin-bottom: 0; }
+  .specBox label { display: block; font-size: 12px; font-weight: 700; color: #7c6f8f; margin-bottom: 5px; }
+  textarea { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 10px 11px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 12px; line-height: 1.55; color: var(--text); background: #fdfaff; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--accent-hover); background: #fff; }
+  input[type=number] { border: 1px solid var(--border); border-radius: 7px; padding: 7px 8px; font-size: 12px; color: var(--text); background: #fdfaff; width: 100%; }
+  input[type=number]:focus { outline: none; border-color: var(--accent-hover); background: #fff; }
+  /* 옷 분석: 위에 "무슨 옷인지" 설명, 아래에 총장·어깨너비 등 실측 항목을 하나씩 나눠서 편집 */
+  .specDesc { margin-bottom: 10px; }
+  /* 설명은 스크롤 없이 5줄까지 바로 보이도록 (12px × 1.5줄간격 × 5줄 + 상하 패딩) */
+  .specDesc textarea { min-height: 110px; font-family: -apple-system, "Segoe UI", sans-serif; font-size: 12px; line-height: 1.5; }
+  /* 옷 종류(garment_type) — 설명과 함께 최종 프롬프트의 GARMENT DESCRIPTION으로 들어감 */
+  .specTypeRow { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .specTypeInput { flex: 1 1 auto; min-width: 0; border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; font-size: 12px; font-weight: 700; color: var(--secondary-text); background: #fdfaff; font-family: -apple-system, "Segoe UI", sans-serif; }
+  .specTypeInput:focus { outline: none; border-color: var(--accent-hover); background: #fff; }
+  .specSubLabel { font-size: 10px; color: var(--text-dim); margin-bottom: 4px; }
+  .descInclude { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #7c6f8f; margin-bottom: 8px; cursor: pointer; }
+  .descInclude input { accent-color: var(--accent-hover); }
+  .specOverlay { width: 100%; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 10px; cursor: zoom-in; display: block; background: #fff; }
+  .specRow { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .specLabel { flex: 1 1 auto; min-width: 0; font-size: 11px; font-weight: 700; color: #7c6f8f; background: #f6eefa; border: 1px solid var(--border); border-radius: 7px; padding: 7px 8px; }
+  .specValue { flex: 0 0 74px; }
+  .specUnit { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); }
+  /* 피팅 지시사항: 상의/하의/전체로 그룹핑하고, 그 안에서 핏·기장·소매 같은 항목별로 한 줄씩 편집 */
+  .instrGroup { margin-bottom: 14px; }
+  .instrGroup:last-child { margin-bottom: 0; }
+  .instrGroupTitle { font-size: 12px; font-weight: 700; color: var(--secondary-text); background: var(--secondary); border-radius: 7px; padding: 5px 10px; margin: 0 0 8px; display: inline-block; }
+  .instrRow { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 7px; }
+  .instrCat { flex: 0 0 62px; font-size: 11px; font-weight: 700; color: #7c6f8f; background: #f6eefa; border: 1px solid var(--border); border-radius: 7px; padding: 7px 6px; text-align: center; }
+  /* 항목별 지시사항 칸은 내용 길이에 맞춰 자동으로 늘었다 줄었다 합니다(최대 5줄, JS에서 조절). */
+  .instrText { flex: 1 1 auto; min-width: 0; font-family: -apple-system, "Segoe UI", sans-serif; font-size: 12px; line-height: 1.5; min-height: 0; overflow-y: hidden; }
+  .muted { color: var(--text-dim); font-size: 11px; }
+  #status { font-size: 12px; color: #a58bb8; padding: 0 22px 6px; min-height: 16px; }
+  /* 합성 결과는 [피팅샷 생성] 버튼 바로 아래, 같은 섹션 안에 */
+  /* 결과는 세로 길이를 통일(--shot-h)하고 가로는 각 이미지 비율대로 — 나란히 놓고 핏 비교 */
+  #resultWrap { --shot-h: 520px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin-top: 4px; }
+  #resultWrap:empty { display: none; }
+  #resultWrap .resultItem { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  #resultWrap img { height: var(--shot-h); width: auto; max-width: none; border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 3px 10px rgba(180,150,190,0.2); cursor: zoom-in; transition: transform 0.12s; }
+  #resultWrap img:hover { transform: scale(1.02); }
+  #resultWrap .resultLabel { font-size: 10px; color: var(--text-dim); text-align: center; }
+  #resultWrap .resultItem.failed .resultLabel { color: #c0392b; }
+  /* 생성 중 카드는 결과와 같은 높이의 세로형(3:4) 자리표시 */
+  #resultWrap .pendingBox { height: var(--shot-h); width: calc(var(--shot-h) * 3 / 4); border-radius: 10px; border: 1px dashed var(--border); background: #f5eef7; display: flex; align-items: center; justify-content: center; }
+  .spinner { width: 22px; height: 22px; border: 3px solid #e9d9ec; border-top-color: var(--accent-hover); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #modalOverlay { display: none; position: fixed; inset: 0; background: rgba(80,60,90,0.55); align-items: center; justify-content: center; z-index: 100; cursor: zoom-out; }
+  #modalOverlay.show { display: flex; }
+  #modalOverlay img { max-width: 90vw; max-height: 90vh; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.35); }
+  footer#usageFooter { margin-top: 24px; padding: 20px 22px 28px; background: var(--panel); border-top: 1px solid var(--border); }
+  footer#usageFooter h2 { font-size: 13px; color: #6d5b8a; margin: 0 0 10px; font-weight: 700; }
+  footer#usageFooter .hint { max-width: 720px; }
+</style>
+</head>
+<body class="mode-separate">
+<header>
+  <h1>피팅샷 v2.3 에디터</h1>
+  <a class="navLink" href="/editor.html">← v2</a>
+  <a class="navLink" href="/new">← v2.1</a>
+  <a class="navLink" href="/new2">← v2.2</a>
+  <div class="modeToggle">
+    <button id="modeSeparateBtn" class="active" type="button">상의/하의 모드</button>
+    <button id="modeDressBtn" type="button">원피스 모드</button>
+  </div>
+  <div class="upload">
+    <label>모델 사진
+      <input type="file" id="modelFile" accept="image/*" />
+      <img class="thumb" id="modelThumb" alt="모델 썸네일" />
+    </label>
+    <div id="separateUpload">
+      <label>상의 사진
+        <input type="file" id="topFile" accept="image/*" />
+        <img class="thumb" id="topThumb" alt="상의 썸네일" />
+      </label>
+      <label>하의 사진
+        <input type="file" id="bottomFile" accept="image/*" />
+        <img class="thumb" id="bottomThumb" alt="하의 썸네일" />
+      </label>
+    </div>
+    <div id="dressUpload">
+      <label>원피스 사진
+        <input type="file" id="dressFile" accept="image/*" />
+        <img class="thumb" id="dressThumb" alt="원피스 썸네일" />
+      </label>
+    </div>
+  </div>
+</header>
+<div id="status"></div>
+<main>
+  <div class="workColumn">
+    <div class="panel">
+      <h2><span class="stepNum">1</span>모델 체형 분석</h2>
+      <p class="hint">업로드한 모델 전신 사진을 AI가 보고 키·둘레·팔다리 길이 같은 신체 실측을 추정합니다. 값이 실제와 다르면 직접 고칠 수 있고, 고친 값이 피팅 지시사항 비교의 기준자로 쓰입니다.</p>
+      <div class="panelActions"><button id="analyzeModelBtn" disabled>모델 체형 분석</button><span class="elapsed" id="modelElapsed"></span></div>
+      <div class="specBox" id="modelSpecBox"></div>
+      <p class="hint" id="modelSpecPlaceholder">[모델 체형 분석]을 누르면 키/몸무게/어깨너비/가슴·허리·엉덩이둘레/팔길이/상체길이/다리길이가 항목별로 표시됩니다.</p>
+    </div>
+
+    <div class="panel">
+      <h2><span class="stepNum">2</span>옷 실측 분석</h2>
+      <p class="hint">업로드한 상의·하의 사진을 AI가 분석해, 작업지시서(사이즈 실측표)에 나올 법한 실측 수치(cm)를 추정하고, 사진 위에 각 치수의 측정 위치를 화살표로 표시합니다. 값이 실제와 다르면 직접 고칠 수 있고, 고친 값이 다음 단계에 그대로 반영됩니다.</p>
+      <div class="panelActions">
+        <button id="analyzeBtn" disabled>옷 분석</button>
+        <span class="elapsed" id="topElapsed"></span><span class="elapsed" id="bottomElapsed"></span>
+      </div>
+      <div class="analysisModelRow">
+        <span class="analysisModelLabel">분석 모델</span>
+        <label><input type="radio" name="analysisModel" value="gemini-3.5-flash" checked /> Gemini 3.5 Flash</label>
+        <label><input type="radio" name="analysisModel" value="gpt-5.6-sol" /> GPT-5.6 Sol</label>
+        <label><input type="radio" name="analysisModel" value="gpt-5.6-terra" /> GPT-5.6 Terra</label>
+        <label><input type="radio" name="analysisModel" value="claude-fable-5" /> Claude Fable 5</label>
+        <label><input type="radio" name="analysisModel" value="claude-opus-4-8" /> Claude Opus 4.8</label>
+      </div>
+      <div class="specGrid" id="separateSpecs">
+        <div class="specBox" id="topSpecBox"></div>
+        <div class="specBox" id="bottomSpecBox"></div>
+      </div>
+      <div class="specGrid" id="dressSpecs">
+        <div class="specBox" id="dressSpecBox"></div>
+      </div>
+      <p class="hint" id="specPlaceholder">[옷 분석]을 누르면 상의·하의 각각 "무슨 옷인지" 설명과 치수 화살표가 그려진 사진이 위에 나오고, 그 아래에 총장·어깨너비·가슴단면 같은 실측 항목이 하나씩 나뉘어 표시됩니다. 항목마다 직접 고칠 수 있습니다.</p>
+    </div>
+
+    <div class="panelWide bottomRow">
+    <div class="panel">
+      <h2><span class="stepNum">3</span>핏 / 기장 지시사항</h2>
+      <p class="hint">위 옷 실측과 모델 실측(measurement-model.txt)을 비교해, "소매가 손등 절반을 덮는다", "밑단이 무릎 아래로 내려온다"처럼 신체 기준의 피팅 지시사항을 만듭니다. 여기서 문장을 직접 수정/추가하면 그 조정이 최종 이미지에 그대로 반영됩니다(참조이미지 방식과 달리 텍스트라 무시될 여지가 없습니다).</p>
+      <div class="panelActions">
+        <button id="instructionsBtn" disabled>피팅 지시사항 생성</button>
+        <span class="elapsed" id="instrElapsed"></span>
+        <label class="noInstrToggle"><input type="checkbox" id="noInstrCheck" /> 핏 지시사항 없이 생성</label>
+      </div>
+      <div id="instructionsWrap"></div>
+      <p class="hint" id="instructionsPlaceholder">[피팅 지시사항 생성]을 누르면 상의 / 하의 / 전체로 나뉘고, 핏·기장·소매·허리 같은 항목별로 정리되어 여기 표시됩니다. 항목마다 직접 편집할 수 있습니다.</p>
+    </div>
+
+    <div class="panel">
+      <h2><span class="stepNum">4</span>피팅샷 생성</h2>
+      <p class="hint">모델·상의·하의 원본 3장(원피스 모드는 2장)과 위 피팅 지시사항을 함께 보내 최종 피팅샷을 합성합니다(prompt-23.txt). 여러 번 눌러 여러 장 생성할 수 있습니다.</p>
+      <div class="enginePicker">
+        <div class="engineHead">
+          <span>생성 모델 (복수 선택)</span>
+          <button id="engineAllBtn" class="tinyBtn" type="button">전체선택</button>
+        </div>
+        <div id="engineChecks" class="engineChecks"></div>
+      </div>
+      <div class="panelActions">
+        <button id="synthBtn" disabled>피팅샷 생성</button>
+        <button id="clearResultsBtn" class="secondary" disabled>초기화</button>
+      </div>
+      <div id="resultWrap"></div>
+    </div>
+    </div>
+  </div>
+</main>
+
+<footer id="usageFooter">
+  <h2>사용법 (v2.3 — 참조이미지 없이 텍스트 지시로 핏/기장 조절)</h2>
+  <p class="hint">
+    v2.2의 "더미 참조이미지" 방식은 이미지로 전달한 기장/핏 조정을 AI가 자주 무시하는 문제가 있었습니다.<br /><br />
+    v2.3은 대신 ① 옷 사진에서 실측(cm)을 추정하고 ② 모델 실측과 비교해 신체 기준 문장으로 된 피팅 지시사항을 뽑은 뒤 ③ 그 텍스트를 최종 프롬프트에 직접 넣습니다. 각 단계 결과를 화면에서 보고 직접 편집할 수 있어, 원하는 핏/기장을 문장으로 확실히 지시할 수 있습니다.
+  </p>
+</footer>
+
+<div id="modalOverlay"><img id="modalImg" alt="확대 이미지" /></div>
+<script src="new23.js"></script>
+</body>
+</html>

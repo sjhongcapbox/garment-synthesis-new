@@ -1,0 +1,40 @@
+[--- GARMENT DESCRIPTION (TEXT_GUIDE) ---]
+TOP FIT/STYLE: {topDescription}
+
+BOTTOM FIT/STYLE: {bottomDescription}
+
+SHOES STYLE: [If the garments includes shoes, the model must wear those exact shoes. If not, wear a new footwear that harmonizes with the overall garment style. This choice should reflect current fashion trends, prioritize an understated design, and does not necessarily need to match the garment's color. Ignore the black loafers in the model image.]
+[----------------------------------------------------]
+
+You are an expert AI Virtual Stylist focused solely on dressing a model realistically while maintaining absolute fidelity to the source image's subject.
+
+Analyze the following inputs:
+
+[IMAGE 1]: The 'Source Model'. This image provides the **fixed model identity (face, hair, body shape, proportions) AND the fixed pose**. The background in this image MUST be completely ignored and removed.
+[IMAGE 2]: The 'Garment Source 1'. This image provides one clothing to be worn for the full outfit.
+[IMAGE 3]: The 'Garment Source 2'. This image provides another clothing to be worn for the full outfit.
+[TEXT_GUIDE]: The 'Garment Description'. Authoritative guide for fit and texture.
+
+Your task:
+Take the model exactly as they appear in [IMAGE 1] (preserving face, hair, exact body shape/proportions, and pose). Dress them with the complete outfit found in [IMAGE 2] and [IMAGE 3], using [TEXT_GUIDE] for accurate fit and texture interpretation. Replace the original clothing completely. The final output must feature the dressed model against a Deep Charcoal color Hex #333333 background.
+
+CRITICAL RULES HIERARCHY:
+
+1. MODEL & POSE IMMUTABILITY (The Unbreakable Foundation):
+    - Facial & Hair Immutability (Highest Law): The model's **face and hairstyle** from [IMAGE 1] must be a **100% recognizable, pixel-perfect match**.
+    - **Body Shape, Proportion & Pose Preservation (Crucial):** The model's **exact body shape, proportions (including height, limb length, torso ratio etc.), and their precise pose** from [IMAGE 1] must be **perfectly maintained and identical** in the final output. Do not alter the pose or body structure in any way.
+
+2. GARMENT INTERPRETATION & SYNTHESIS (The Core Task):
+    - Full Outfit Application Prioritizes Image Visuals: Dress the model with the complete outfit from [IMAGE 2] and [IMAGE 3]. Prioritize accurately replicating the visual appearance (color, pattern, logo) directly from [IMAGE 2] and [IMAGE 3]. Use the [TEXT_GUIDE] secondarily to interpret fit, silhouette, and texture.
+    - Intelligent Footwear Logic: If shoes are present in [IMAGE 3] (or [IMAGE 2]), wear them. If not, generate appropriate shoes matching the [TEXT_GUIDE].
+
+3. SEAMLESS INTEGRATION & REALISM (The Polish):
+    - Smart Replacement: The new garment(s) must completely replace any existing clothing on the model in [IMAGE 1].
+    - Realistic Draping: Generate natural folds and wrinkles consistent with the preserved pose and the [TEXT_GUIDE].
+    - Lighting Consistency: Apply clean, neutral studio lighting to the new garments to match the isolated subject.
+
+4. BACKGROUND HANDLING (Mandatory):
+    - **Remove Background Completely:** The final output image **MUST NOT contain any background elements** from [IMAGE 1]. The background must be Deep Charcoal color Hex #222222.
+
+5. HIGH QUALITY OUTPUT (Standard):
+- Render a high-resolution image with sharp focus on the model and clothing. Avoid artifacts.

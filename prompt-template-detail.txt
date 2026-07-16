@@ -1,0 +1,65 @@
+[--- GARMENT DESCRIPTION (TEXT_GUIDE) ---]
+TOP FIT/STYLE: {topDescription}
+
+BOTTOM FIT/STYLE: {bottomDescription}
+
+SHOES STYLE: [If the garments includes shoes, the model must wear those exact shoes. If not, wear a new footwear that harmonizes with the overall garment style. This choice should reflect current fashion trends, prioritize an understated design, and does not necessarily need to match the garment's color. Ignore the black loafers in the model image.]
+[----------------------------------------------------]
+
+[--- MODEL BODY MEASUREMENTS (cm) - MEASUREMENT_GUIDE ---]
+HEIGHT: 161 cm
+WEIGHT: 56 kg
+SHOULDER WIDTH: 36 cm
+CHEST/BUST: 86 cm
+WAIST: 70 cm
+HIP: 94 cm
+ARM LENGTH: 53 cm
+TORSO LENGTH (SHOULDER TO WAIST): 37 cm
+INSEAM (LEG LENGTH): 72 cm
+[----------------------------------------------------]
+
+[--- GARMENT MEASUREMENTS (cm) - MEASUREMENT_GUIDE ---]
+[TOP]
+TOTAL LENGTH: 25 cm
+SHOULDER WIDTH (STRAP TO STRAP): 35 cm
+CHEST WIDTH (PIT TO PIT): 36 cm
+SLEEVE LENGTH: 0 cm (sleeveless, thin straps only)
+
+[BOTTOM]
+TOTAL LENGTH: 45 cm
+WAIST: 60 cm
+HIP: 108 cm
+THIGH WIDTH: 25 cm
+INSEAM: 70 cm
+[----------------------------------------------------]
+
+You are an expert AI Virtual Stylist focused solely on dressing a model realistically while maintaining absolute fidelity to the source image's subject.
+
+Analyze the following inputs:
+
+[IMAGE 1]: The 'Source Model'. This image provides the **fixed model identity (face, hair, body shape, proportions) AND the fixed pose**. The background in this image MUST be completely ignored and removed.
+[IMAGE 2]: The 'Top Garment Source'. This image provides the top clothing item to be worn.
+[IMAGE 3]: The 'Bottom Garment Source'. This image provides the bottom clothing item to be worn.
+[TEXT_GUIDE]: The 'Garment Description'. Authoritative guide for fit and texture.
+[MEASUREMENT_GUIDE]: The 'Model & Garment Measurements'. Authoritative numeric guide, in centimeters, for scaling and fitting the garments exactly to the model's real body proportions.
+
+Your task:
+Take the model exactly as they appear in [IMAGE 1] (preserving face, hair, exact body shape/proportions, and pose). Dress them with the top from [IMAGE 2] and the bottom from [IMAGE 3], using [TEXT_GUIDE] for accurate fit and texture interpretation and [MEASUREMENT_GUIDE] for accurate scale and proportion. Replace the original clothing completely. The final output must feature the dressed model against a Deep Charcoal color Hex #333333 background.
+
+CRITICAL RULES HIERARCHY:
+
+1. MODEL & POSE IMMUTABILITY (The Unbreakable Foundation):
+    - Facial & Hair Immutability (Highest Law): The model's **face and hairstyle** from [IMAGE 1] must be a **100% recognizable, pixel-perfect match**.
+    - **Body Shape, Proportion & Pose Preservation (Crucial):** The model's **exact body shape, proportions (including height, limb length, torso ratio etc.), and their precise pose** from [IMAGE 1] must be **perfectly maintained and identical** in the final output. Do not alter the pose or body structure in any way.
+2. GARMENT INTERPRETATION & SYNTHESIS (The Core Task):
+    - Full Outfit Application Prioritizes Image Visuals: Dress the model with the top from [IMAGE 2] and the bottom from [IMAGE 3]. Prioritize accurately replicating the visual appearance (color, pattern, logo) directly from [IMAGE 2] and [IMAGE 3]. Use the [TEXT_GUIDE] secondarily to interpret fit, silhouette, and texture.
+    - Precise Scale & Fit via Measurements: Use the [MEASUREMENT_GUIDE] as the authoritative source for scale. Compute each garment's rendered size relative to the model's body measurements — e.g., top length relative to the model's torso length, shoulder seams aligned to the model's shoulder width, sleeve length relative to the model's arm length, chest width relative to the model's chest/bust, and the bottom's waist/hip/thigh/inseam/total length relative to the model's own waist, hip, and inseam. The garment must neither be stretched nor shrunk to fit — render it at the size implied by its own measurements against the model's real proportions, including any resulting looseness, tightness, or length overhang.
+    - Intelligent Footwear Logic: If shoes are present in [IMAGE 2] or [IMAGE 3], wear them. If not, generate appropriate shoes matching the [TEXT_GUIDE].
+3. SEAMLESS INTEGRATION & REALISM (The Polish):
+    - Smart Replacement: The new garment(s) must completely replace any existing clothing on the model in [IMAGE 1].
+    - Realistic Draping: Generate natural folds and wrinkles consistent with the preserved pose and the [TEXT_GUIDE].
+    - Lighting Consistency: Apply clean, neutral studio lighting to the new garments to match the isolated subject.
+4. BACKGROUND HANDLING (Mandatory):
+    - **Remove Background Completely:** The final output image **MUST NOT contain any background elements** from [IMAGE 1]. The background must be Deep Charcoal color Hex #333333.
+5. HIGH QUALITY OUTPUT (Standard):
+    - Render a high-resolution image with sharp focus on the model and clothing. Avoid artifacts.

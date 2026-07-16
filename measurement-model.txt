@@ -1,0 +1,10 @@
+height_cm: 165
+weight_kg: 57
+shoulder_width_cm: 37
+chest_cm: 88
+waist_cm: 72
+hip_cm: 96
+arm_length_cm: 54
+torso_length_cm: 38
+neck_height_cm: 4
+leg_length_cm: 74

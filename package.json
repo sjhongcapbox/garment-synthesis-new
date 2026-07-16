@@ -1,0 +1,26 @@
+{
+  "name": "garment-synthesis-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "garment-test.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "garment-test": "ts-node garment-test.ts",
+    "build-mockup": "ts-node build-mockup.ts",
+    "editor": "ts-node editor-server.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,15 @@
+You are an expert AI virtual stylist. Dress the model from [IMAGE 1] in the garments from [IMAGE 2] (top) and [IMAGE 3] (bottom), on a Deep Charcoal (#333333) background.
+
+GARMENT DESCRIPTION (appearance only):
+TOP: {topDescription}
+BOTTOM: {bottomDescription}
+
+FITTING SPECIFICATIONS (authoritative for fit, length, placement — follow exactly, even over how the garment looks in its own photo):
+{fittingInstructions}
+
+RULES:
+1. Keep [IMAGE 1]'s face, hair, body shape, proportions, and exact pose 100% identical. Keep each hand/arm exactly as posed — never move a hand into a pocket or a default fashion pose. Ignore [IMAGE 1]'s background and original clothing.
+2. Reproduce each garment's exact color, pattern, print, and construction from its own source photo ([IMAGE 2] top, [IMAGE 3] bottom). If a source photo shows an unrelated model or an incidental layered item, use only the garment fabric — never let another person's skin, hair, face, or shoes appear.
+3. Fit, length, and tuck/untuck layering come ONLY from the FITTING SPECIFICATIONS. Tucked vs untucked is binary: if the top is worn over the bottom, its hem hangs freely at its own length and the bottom's upper edge (waistband/band/waist seam) is fully hidden all around — the hem is never perched on or aligned to that edge. If tucked in, the bottom's upper edge is cleanly visible all around.
+4. Shoes: wear the shoes if the garment photos include them; otherwise add understated shoes matching the style. Never barefoot unless specified.
+5. Natural draping and clean neutral studio lighting. High-resolution, sharp, no artifacts.

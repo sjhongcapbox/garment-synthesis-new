@@ -1,0 +1,46 @@
+[--- GARMENT DESCRIPTION (TEXT_GUIDE) ---]
+This section describes WHAT the garment is — its identity, fabric look, color, and construction details. It is a guide for the garment's appearance only. If any wording here touches on fit or length, treat it as background identity: the FITTING SPECIFICATIONS section below is the sole authority on fit, length, and placement, and always wins on any conflict.
+
+GARMENT: {topDescription}
+
+SHOES STYLE: [If the garment includes shoes, the model must wear those exact shoes. If not, wear a new footwear that harmonizes with the overall garment style. This choice should reflect current fashion trends, prioritize an understated design, and does not necessarily need to match the garment's color. Ignore the black loafers in the model image.]
+[----------------------------------------------------]
+
+[--- FITTING SPECIFICATIONS (기장·핏 지시사항) ---]
+The following fitting instructions were derived by comparing this garment's real spec-sheet measurements against this exact model's body measurements. They tell you precisely how the garment must sit on THIS model — where the hem, sleeve ends, waistline, and neckline land on the body, and how loose or fitted each area is. These instructions are the AUTHORITATIVE, non-negotiable source for all fit, length, and placement. Follow every one of them exactly, even where they differ from how the garment looks in its own source photo — they represent the intended, correct fit on this body.
+
+{fittingInstructions}
+[----------------------------------------------------]
+
+You are an expert AI Virtual Stylist focused solely on dressing a model realistically while maintaining absolute fidelity to the source image's subject.
+
+Analyze the following inputs:
+
+[IMAGE 1]: The 'Source Model'. This image provides the **fixed model identity (face, hair, body shape, proportions) AND the fixed pose**. The background in this image MUST be completely ignored and removed.
+[IMAGE 2]: The 'Garment Source'. This image provides the outfit to be worn — either a single one-piece garment (dress, jumpsuit, overall, etc.) OR a matching top+bottom set photographed together as one product. It may be flat-laid, on a hanger, or worn by an unrelated live model — in every case, extract ONLY the garment fabric itself (its color, pattern, and construction). If it is worn by a model, that model is not [IMAGE 1] and must be completely ignored (their skin, hair, face, jewelry, accessories, and any shoes must never appear in the output). If it is on a hanger, hook, or clip, that fixture must never appear in the output either. Deciding what to reproduce: if the photo shows a coordinated set (matching top and bottom presented together as the product), reproduce BOTH pieces in full — never drop one piece of a set. Only ignore a garment that is clearly incidental and not part of the product (e.g. a plain inner slip peeking out under a dress).
+[TEXT_GUIDE]: The 'Garment Description'. Guide for the garment's style and texture.
+
+Your task:
+Take the model exactly as they appear in [IMAGE 1] (preserving face, hair, exact body shape/proportions, and pose). Dress them with the outfit from [IMAGE 2] (the one-piece garment, or every piece of the set), reproducing its exact appearance from its source photo, while making the FIT, LENGTH, and PLACEMENT match the FITTING SPECIFICATIONS above precisely. Replace the original clothing completely. The final output must feature the dressed model against a Deep Charcoal color Hex #333333 background.
+
+CRITICAL RULES HIERARCHY:
+
+1. MODEL & POSE IMMUTABILITY (The Unbreakable Foundation):
+    - Facial & Hair Immutability (Highest Law): The model's **face and hairstyle** from [IMAGE 1] must be a **100% recognizable, pixel-perfect match**.
+    - **Body Shape, Proportion & Pose Preservation (Crucial):** The model's **exact body shape, proportions (including height, limb length, torso ratio etc.), and their precise pose** from [IMAGE 1] must be **perfectly maintained and identical** in the final output. Do not alter the pose or body structure in any way.
+    - **Exact Hand/Arm Position, No Stylistic Substitutions (Crucial):** Keep each hand and arm in the exact position and gesture they have in [IMAGE 1] — the same bend at the elbow, the same wrist angle, the same open/closed state of each hand. Do NOT move hands into pockets, behind the back, on the hips, or into any other "default fashion pose" that is not literally what [IMAGE 1] shows. If a hand is visibly at the model's side in [IMAGE 1], it must stay visibly at the model's side, not tucked into a pocket of the new garment.
+2. GARMENT APPEARANCE FROM SOURCE, FIT FROM SPECIFICATIONS (The Core Task):
+    - Appearance Comes From the Source Photo: Reproduce the visual appearance (color, pattern, print, logo, fabric texture, construction details like collar/placket/buttons/pockets/cuffs/belt) directly and faithfully from [IMAGE 2].
+    - Fit, Length & Placement Come From the FITTING SPECIFICATIONS: Where the hem, sleeve ends, cuffs, waistline, and neckline land on the body — and how loose or fitted each area is — is dictated entirely by the FITTING SPECIFICATIONS section above. Follow them exactly.
+    - Specifications Override the Source Photo's Own Proportions (Critical): If the FITTING SPECIFICATIONS call for a length or fit that differs from how the garment happens to look in [IMAGE 2] — e.g. sleeves that reach past the wrist, a hem below the knee, a relaxed rather than fitted body — render what the SPECIFICATIONS say, not the source photo's own proportions. The source photo is for appearance only; the specifications are for fit and length. Never quietly revert the garment to its own photographed length or fit when the specifications say otherwise.
+    - Source Photo May Show an Unrelated Person or Layered Outfit (Critical): [IMAGE 2] is only a reference for what the garment fabric looks like — if it shows an unrelated model wearing it, or another garment layered with it, extract and reproduce only the single intended garment's fabric. Never let any unrelated model's skin, hair, face, jewelry, shoes, or an incidentally-layered undergarment leak into the final output — the only body in the output is [IMAGE 1]'s model, and the only garment is the one this task is dressing them in.
+    - Intelligent Footwear Logic (Never Barefoot): If shoes are present in [IMAGE 2], wear them. If not, generate appropriate shoes matching the [TEXT_GUIDE]'s SHOES STYLE. The model in the final output must always be wearing shoes (unless [TEXT_GUIDE] explicitly calls for bare feet).
+3. SEAMLESS INTEGRATION & REALISM (The Polish):
+    - Smart Replacement: The new garment must completely replace any existing clothing on the model in [IMAGE 1].
+    - Realistic Draping: Generate natural folds and wrinkles consistent with the preserved pose, the garment's fabric, and the fit described in the FITTING SPECIFICATIONS.
+    - Self-Check Before Finishing (Critical): Go through the FITTING SPECIFICATIONS line by line and confirm the output matches each one — sleeve end position, hem position, waistline height, neckline position, and overall looseness/tightness. If any of them is not reflected in the image, fix it before returning.
+    - Lighting Consistency: Apply clean, neutral studio lighting to the new garment to match the isolated subject.
+4. BACKGROUND HANDLING (Mandatory):
+    - **Remove Background Completely:** The final output image **MUST NOT contain any background elements** from [IMAGE 1]. The background must be Deep Charcoal color Hex #333333.
+5. HIGH QUALITY OUTPUT (Standard):
+    - Render a high-resolution image with sharp focus on the model and clothing. Avoid artifacts.

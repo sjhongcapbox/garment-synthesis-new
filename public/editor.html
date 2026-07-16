@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>피팅샷 v2 에디터</title>
+<style>
+  :root {
+    --bg: #fdf7fb;
+    --panel: #ffffff;
+    --header-from: #ffe1ec;
+    --header-to: #e0f2ff;
+    --border: #f0dce8;
+    --text: #5b5568;
+    --text-dim: #a89bb0;
+    --accent: #c4b5fd;
+    --accent-hover: #a78bfa;
+    --accent-text: #4c1d95;
+    --secondary: #fde4f0;
+    --secondary-hover: #fbcfe4;
+    --secondary-text: #9d174d;
+    --top-color: #f472b6;
+    --bottom-color: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+  header { padding: 16px 22px; background: linear-gradient(120deg, var(--header-from), var(--header-to)); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; color: #6d5b8a; }
+  .upload { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+  .upload label { font-size: 12px; color: #7c6f8f; display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+  input[type=file] { color: var(--text); font-size: 12px; max-width: 160px; }
+  .thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(150,120,160,0.25); display: none; background: #f5eef7; }
+  .thumb.show { display: block; }
+  button { background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; padding: 10px 18px; font-size: 13px; cursor: pointer; font-weight: 700; box-shadow: 0 2px 6px rgba(167,139,250,0.35); transition: background 0.15s, transform 0.1s; }
+  button:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+  button:disabled { background: #e9e3ee; color: #b6acc2; box-shadow: none; cursor: not-allowed; }
+  button.secondary { background: var(--secondary); color: var(--secondary-text); box-shadow: 0 2px 6px rgba(244,114,182,0.2); }
+  button.secondary:hover:not(:disabled) { background: var(--secondary-hover); }
+  main { display: flex; gap: 18px; padding: 18px 22px; align-items: flex-start; }
+  #canvasWrap { position: relative; background: var(--panel); border-radius: 14px; overflow: hidden; line-height: 0; border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(180,150,190,0.18); }
+  #stage { display: block; cursor: default; }
+  aside { width: 250px; font-size: 13px; color: var(--text); display: flex; flex-direction: column; gap: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(180,150,190,0.12); }
+  .panel h2 { font-size: 13px; color: #6d5b8a; margin: 0 0 10px; font-weight: 700; }
+  .legend { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; font-size: 12px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .hint { font-size: 11px; color: var(--text-dim); margin-top: 8px; line-height: 1.6; }
+  #outlineThumbs { display: flex; gap: 10px; }
+  #outlineThumbs .outlineThumbBox { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .thumbImgWrap { width: 90px; height: 90px; border-radius: 10px; border: 1px solid var(--border); background: #f5eef7; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .thumbImgWrap img { width: 100%; height: 100%; object-fit: contain; }
+  .thumbImgWrap img:not([src]), .thumbImgWrap img[src=""] { visibility: hidden; }
+  #outlineThumbs span { font-size: 11px; color: var(--text-dim); }
+  .timing { font-size: 10px; color: #c08fb0; font-weight: 600; }
+  #status { font-size: 12px; color: #a58bb8; padding: 0 22px 10px; min-height: 16px; }
+  #resultPanel:has(#resultWrap:empty) { display: none; }
+  #resultWrap { display: flex; flex-direction: column; gap: 12px; }
+  #resultWrap .resultItem { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  #resultWrap img { width: 100%; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 3px 10px rgba(180,150,190,0.2); cursor: zoom-in; transition: transform 0.12s; }
+  #resultWrap img:hover { transform: scale(1.02); }
+  #resultWrap .resultLabel { font-size: 11px; color: var(--text-dim); }
+  #modalOverlay { display: none; position: fixed; inset: 0; background: rgba(80,60,90,0.55); align-items: center; justify-content: center; z-index: 100; cursor: zoom-out; }
+  #modalOverlay.show { display: flex; }
+  #modalOverlay img { max-width: 90vw; max-height: 90vh; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.35); }
+</style>
+</head>
+<body>
+<header>
+  <h1>피팅샷 v2 에디터</h1>
+  <button id="toggleLayerBtn" class="secondary" disabled>겹침 순서: 상의가 위</button>
+  <div class="upload">
+    <label>모델 사진
+      <input type="file" id="modelFile" accept="image/*" />
+      <img class="thumb" id="modelThumb" alt="모델 썸네일" />
+    </label>
+    <label>상의 사진
+      <input type="file" id="topFile" accept="image/*" />
+      <img class="thumb" id="topThumb" alt="상의 썸네일" />
+    </label>
+    <label>하의 사진
+      <input type="file" id="bottomFile" accept="image/*" />
+      <img class="thumb" id="bottomThumb" alt="하의 썸네일" />
+    </label>
+  </div>
+  <button id="runBtn">참조이미지 만들기</button>
+  <button id="resetTopBtn" class="secondary" disabled>상의 초기화</button>
+  <button id="resetBottomBtn" class="secondary" disabled>하의 초기화</button>
+  <button id="applyBtn" disabled>입히기</button>
+</header>
+<div id="status"></div>
+<main>
+  <div id="canvasWrap"><canvas id="stage"></canvas></div>
+  <aside>
+    <div class="panel">
+      <h2>Outline 미리보기</h2>
+      <div id="outlineThumbs">
+        <div class="outlineThumbBox">
+          <div class="thumbImgWrap"><img id="topOutlineThumb" alt="상의 outline" /></div>
+          <span>상의</span>
+          <span class="timing" id="topOutlineTiming"></span>
+        </div>
+        <div class="outlineThumbBox">
+          <div class="thumbImgWrap"><img id="bottomOutlineThumb" alt="하의 outline" /></div>
+          <span>하의</span>
+          <span class="timing" id="bottomOutlineTiming"></span>
+        </div>
+      </div>
+      <p class="hint">이 모양을 기준으로 캔버스에서 추가로 조정하게 됩니다.</p>
+    </div>
+    <div class="panel">
+      <h2>사용법</h2>
+      <div class="legend"><span class="dot" style="background:#f472b6"></span> 상의 컨트롤 포인트</div>
+      <div class="legend"><span class="dot" style="background:#60a5fa"></span> 하의 컨트롤 포인트</div>
+      <p class="hint">
+        점을 클릭+드래그하면 그 부분만 국소적으로 늘어나거나 줄어듭니다(메쉬 와프).<br /><br />
+        옷 안쪽(점이 아닌 부분)을 클릭하면 선택되어 점선 테두리가 나타나고, 그대로 드래그하면 옷 전체가 이동합니다.<br /><br />
+        선택된 상태에서 테두리 코너를 드래그하면 비율 그대로, 변 중점(위/아래/좌/우)을 드래그하면 가로 또는 세로 한쪽 방향으로만 크기가 조절됩니다.<br /><br />
+        테두리 위쪽의 동그란 핸들을 드래그하면 옷 전체가 회전합니다. 빈 곳을 클릭하면 선택이 해제됩니다.<br /><br />
+        상의/하의가 겹칠 때 어느 쪽이 앞에 보일지는 왼쪽 위 [겹침 순서] 버튼으로 직접 바꿀 수 있습니다.<br /><br />
+        다 조정했으면 [입히기]를 눌러 지금 배치 그대로 AI 피팅샷 합성을 실행합니다.
+      </p>
+    </div>
+  </aside>
+  <aside id="resultColumn">
+    <div class="panel" id="resultPanel">
+      <h2>합성 결과</h2>
+      <div id="resultWrap"></div>
+    </div>
+  </aside>
+</main>
+<div id="modalOverlay"><img id="modalImg" alt="확대 이미지" /></div>
+<script src="editor.js"></script>
+</body>
+</html>

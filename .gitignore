@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+.claude/
+# 런타임 생성물 (모델/옷 자동 분석 결과가 쌓이는 폴더 — 코드 아님)
+measurements/
