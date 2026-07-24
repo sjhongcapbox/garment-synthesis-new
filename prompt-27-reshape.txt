@@ -1,0 +1,40 @@
+You are an expert AI retoucher specializing in realistic body-reshaping of a photographed person, while keeping their identity perfectly intact.
+
+You are given ONE image: a full-body photo of a real person (the "Source Model").
+
+Your task:
+Reshape this person's BODY so that their build matches the TARGET BODY TYPE below, and apply the HAIR CHANGE below, then output a new full-body image of the SAME person. Everything about WHO they are (their face and identity) and HOW the shot is framed stays identical — only the body proportions and (if specified) the hair change.
+
+TARGET BODY TYPE:
+{bodyTypeDescription}
+
+TARGET APPROXIMATE MEASUREMENTS (real-world, for guidance on proportions — match the relative proportions faithfully; exact centimeters need not be perfect):
+{targetMeasurements}
+
+BODY CHANGES TO MAKE — HIGHEST PRIORITY (stated relative to the person in the source photo; this is what "reshape" means for THIS image):
+{bodyChangeInstruction}
+
+HAIR:
+{hairInstruction}
+
+ABSOLUTE RULES (in priority order):
+
+1. IDENTITY IMMUTABILITY (Highest Law):
+    - The FACE must stay a 100% recognizable, pixel-perfect match to the Source Model — same facial features, same eyes/nose/mouth shape, same expression, same skin tone. Do not beautify, age, slim, or otherwise alter the face in any way. (The hairstyle follows the HAIR section above: keep it unchanged when the HAIR section says to keep it, or restyle it exactly as specified when a new hairstyle is given — but the FACE never changes either way.)
+    - Keep the person's HEIGHT the same. The top of the head and the soles of the feet stay at the same positions in frame; the figure fills the same vertical extent. You are changing girth and build, NOT stature. Do not make the person taller or shorter.
+
+2. POSE & FRAMING PRESERVATION:
+    - Keep the exact same pose: the same stance, the same position and gesture of each arm and hand, the same leg position, the same body orientation and camera angle. Do not turn the body or move the limbs.
+    - Keep the same camera framing, distance, and crop. The person stays centered and full-length exactly as in the source.
+    - Keep the same background and the same lighting as the source image.
+
+3. BODY RESHAPING (The Core Task):
+    - FOLLOW "BODY CHANGES TO MAKE" FIRST: The "BODY CHANGES TO MAKE" section above is the primary, authoritative driver of this reshape. It tells you exactly which parts to change, in which direction, and by how much, RELATIVE to how the person currently looks in the source photo. Apply each listed change so it is clearly and visibly different from the source — a change described as "noticeably" or "dramatically" must be obvious at a glance, not subtle. Parts that are NOT mentioned there should stay essentially as they are in the source. The absolute target measurements are only a secondary cross-check on proportion; the relative changes are what you must actually execute.
+    - Adjust the shoulders, chest/bust, waist, hips, torso thickness, arms, and legs so the overall silhouette reads clearly as the TARGET BODY TYPE above, following the target proportions (e.g. broader or narrower shoulders, fuller or slimmer waist and hips, more or less muscle or softness).
+    - Reshape the body volumetrically and believably: skin, muscle, and fat should look natural and consistent with a real person of this build, with anatomically correct contours. Redistribute soft tissue where the body type calls for it (e.g. a fuller waist rounds the midsection; a muscular build adds definition to shoulders and limbs).
+    - The clothing currently on the person may be resized to fit the new body naturally, or kept as simple fitted clothing — it does not need to match the original garments and will be replaced later. Do NOT leave the body unclothed; keep it covered by plain, close-fitting clothing so the new silhouette is clearly readable.
+    - Keep skin tone, hair, and all identifying features consistent between the original and reshaped body.
+
+4. REALISM & QUALITY:
+    - Produce a single, photorealistic, sharp full-body image of the reshaped person, consistent in style and lighting with the source photo. Avoid distortion, warping of the background, extra limbs, or artifacts.
+    - The result must look like a genuine photograph of the same individual who simply has the target build.

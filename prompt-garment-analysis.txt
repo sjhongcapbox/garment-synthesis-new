@@ -21,6 +21,12 @@ For EACH measurement, also report WHERE that measurement is taken on this exact 
 
 Also provide, in KOREAN (한국어):
 - garment_type: a short phrase naming the garment type and its fit (e.g. "링거 티셔츠, 레귤러 핏", "와이드 크롭 데님 팬츠", "A라인 미디 스커트").
+- design: the garment's DESIGN — overall silhouette and shape, neckline/collar shape, closure (버튼 플라켓 / 지퍼 / 랩 / 풀오버), sleeve shape, and how the panels are cut. Describe SHAPE only.
+- material_color: the MATERIAL and COLOR — fabric type and weave, surface texture, sheen (매트 / 광택), apparent thickness and weight, and the exact colour with its tone. Finish with how the fabric behaves when worn: stiff and structured, or soft and flowing (드레이프). This drape note matters because the measurements cannot carry it.
+- details: the DETAILS an artist would otherwise miss — 단추, 포켓, 스티치, 커프스, 시보리, 플리츠·셔링, 트임, 프린트, 자수, 라벨, 트리밍. Only what is clearly visible in this photo; write "특별한 디테일 없음" if there are none.
+
+CRITICAL — design, material_color, and details must NEVER state fit or length. Do not say how long the garment is, where a hem or sleeve lands on the body, or how loose or tight it is (오버핏, 크롭, 발목까지, 여유롭게 떨어짐 …). Those are carried by the measurements and by a separate fit calculation, and a description that repeats them creates a conflicting second instruction. Describe shape, material, colour, and construction — never position on a body.
+
 - description: one or two sentences describing overall what this garment is — its type, the fabric's look and feel, color, and notable design details (칼라, 단추, 포켓, 셔링, 트임, 프린트 등). Focus on the garment's IDENTITY and APPEARANCE. Mention fit/length only at the identity level where it names the garment (e.g. "크롭 맨투맨", "와이드 팬츠") — do not elaborate on how long or how loose it is, because precise fit and length are carried separately by the measurements. This is a plain-language summary a person can read at a glance to confirm the AI understood the garment correctly.
 
 Return ONLY the structured data requested. Every measurement value must be a realistic number in centimeters for a single standard size of this specific garment.

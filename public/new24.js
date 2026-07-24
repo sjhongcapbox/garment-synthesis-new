@@ -374,8 +374,20 @@ function renderOverlayCanvas(img, items, width) {
   return canvas;
 }
 
+// 옷 사진 위 치수 화살표 표시 여부(체크박스). 끄면 화살표·라벨·"단위: cm" 없이 원본 사진만
+// 보여줍니다. 모델에 따라 화살표 위치가 잘 안 맞을 때 사진만 깨끗하게 보려는 용도입니다.
+// (수치 자체와 비율 잠금은 그대로 동작합니다 — 표시만 끄는 것)
+const showArrowsCheck = document.getElementById('showArrowsCheck');
+function arrowsEnabled() {
+  return !showArrowsCheck || showArrowsCheck.checked;
+}
 function renderSpecOverlayCanvas(img, spec, width) {
-  return renderOverlayCanvas(img, spec.measurements, width);
+  return renderOverlayCanvas(img, arrowsEnabled() ? spec.measurements : [], width);
+}
+if (showArrowsCheck) {
+  // 켜고 끌 때 이미 그려진 상의/하의/원피스 오버레이를 다시 그립니다.
+  // (수치·자물쇠·AI 추정 상태는 spec 객체에 있으므로 재렌더해도 보존됩니다.)
+  showArrowsCheck.addEventListener('change', renderSpecs);
 }
 
 const includeDescState = { top: false, bottom: false, dress: false };

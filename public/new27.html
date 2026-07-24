@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>피팅샷 v2.7 에디터</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --panel: #ffffff;
+    --border: #e7e9ee;
+    --text: #2f3440;
+    --text-dim: #8b93a3;
+    /* StyleRoom 포인트: 민트/틸 */
+    --accent: #15bfbf;
+    --accent-hover: #0fa8a8;
+    --on-accent: #ffffff;
+    --accent-text: #0a8f8f;
+    --accent-soft: #e6f8f7;
+    --accent-soft-border: #bfe7e5;
+    /* 보조: 슬레이트 그레이 */
+    --secondary: #eef1f5;
+    --secondary-hover: #e3e8ef;
+    --secondary-text: #566072;
+    /* NEW 뱃지 블루 */
+    --badge: #4a76f5;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+  header { padding: 14px 24px; background: var(--panel); border-top: 3px solid var(--accent); border-bottom: 1px solid var(--border); box-shadow: 0 1px 4px rgba(40,50,70,0.04); }
+  .headTop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  header h1 { font-size: 19px; margin: 0; font-weight: 800; color: #222b36; letter-spacing: -0.01em; }
+  header h1 .brandAccent { color: var(--accent); }
+  header .navLink { font-size: 12px; color: var(--secondary-text); text-decoration: none; font-weight: 700; background: var(--secondary); padding: 5px 11px; border-radius: 8px; transition: background 0.12s, color 0.12s; }
+  header .navLink:hover { background: var(--accent-soft); color: var(--accent-text); }
+  .modeToggle { display: flex; gap: 4px; background: var(--secondary); border-radius: 9px; padding: 3px; }
+  .modeToggle button { background: transparent; color: var(--secondary-text); box-shadow: none; padding: 6px 12px; font-size: 13px; }
+  .modeToggle button.active { background: #fff; box-shadow: 0 1px 4px rgba(21,191,191,0.25); color: var(--accent-text); }
+  /* ---- 다중 업로드 슬롯 ---- */
+  .upload { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+  .slot { background: #fafbfc; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; min-width: 158px; }
+  .slotHead { font-size: 12px; font-weight: 700; color: #3f4655; margin-bottom: 5px; display: flex; gap: 6px; align-items: baseline; }
+  .slotCount { font-size: 11px; color: var(--text-dim); font-weight: 600; }
+  .slot input[type=file] { max-width: 142px; font-size: 12px; color: var(--text); }
+  .slot input[type=file]:disabled { opacity: 0.35; }
+  .slotHint { font-size: 10px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
+  .thumbs { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .thumbs:empty { display: none; }
+  .thumbItem { position: relative; }
+  .thumbItem img { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(60,80,110,0.18); display: block; background: #eef1f5; }
+  .thumbItem .del { position: absolute; top: -6px; right: -6px; width: 17px; height: 17px; border-radius: 50%; background: #fff; border: 1px solid var(--border); color: #e2483d; font-size: 11px; line-height: 1; cursor: pointer; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.15); font-weight: 700; }
+  .thumbItem .swap { position: absolute; bottom: -5px; right: -6px; background: #fff; border: 1px solid var(--border); color: var(--accent-text); font-size: 10px; font-weight: 700; border-radius: 5px; padding: 1px 4px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .thumbItem .swap input { display: none; }
+  .thumbItem .layerNo { position: absolute; bottom: -4px; left: -4px; background: var(--accent); color: var(--on-accent); font-size: 10px; font-weight: 700; border-radius: 5px; padding: 1px 4px; }
+  button { background: var(--accent); color: var(--on-accent); border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-weight: 700; box-shadow: 0 2px 6px rgba(21,191,191,0.30); transition: background 0.15s, transform 0.1s; }
+  button:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+  button:disabled { background: #e6e9ee; color: #adb4c0; box-shadow: none; cursor: not-allowed; }
+  .enginePicker { margin-bottom: 12px; }
+  .engineHead { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 700; color: #3f4655; margin-bottom: 6px; }
+  .tinyBtn { background: var(--secondary); color: var(--secondary-text); border: none; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: none; }
+  .tinyBtn:hover { background: var(--accent-soft); color: var(--accent-text); }
+  .engineChecks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 10px; }
+  .engineChecks label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #3f4655; cursor: pointer; padding: 3px 0; }
+  .engineChecks input { accent-color: var(--accent); }
+  .analysisModelRow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 12px; }
+  .analysisModelLabel { font-size: 12px; font-weight: 700; color: #3f4655; }
+  .analysisModelRow label { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: #3f4655; cursor: pointer; }
+  .analysisModelRow input { accent-color: var(--accent); }
+  .noInstrToggle { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--secondary-text); cursor: pointer; }
+  .noInstrToggle input { accent-color: var(--accent); }
+  .backToggle { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #3f4655; cursor: pointer; margin: 4px 0 12px; padding: 8px 11px; background: var(--accent-soft); border: 1px solid var(--accent-soft-border); border-radius: 9px; }
+  .backToggle input { accent-color: var(--accent); }
+  .backToggle b { color: var(--accent-text); }
+  .backToggleHint { font-size: 11px; font-weight: 600; color: var(--text-dim); }
+  .viewModeRow { flex-wrap: wrap; gap: 6px 16px; }
+  .viewModeRow > b { color: var(--accent-text); margin-right: 4px; }
+  .viewModeRow label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600; }
+  .viewModeRow input { accent-color: var(--accent); }
+  button.secondary { background: #fff; color: var(--secondary-text); border: 1px solid var(--border); box-shadow: none; }
+  button.secondary:hover:not(:disabled) { background: var(--secondary); }
+  main { display: flex; gap: 18px; padding: 18px 24px; align-items: flex-start; }
+  .workColumn { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; align-items: start; }
+  .panelWide { grid-column: 1 / -1; }
+  .bottomRow { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 900px) {
+    .workColumn { grid-template-columns: 1fr; }
+    .bottomRow { grid-template-columns: 1fr; }
+  }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(40,50,70,0.05); }
+  .panel h2 { font-size: 15px; color: #222b36; margin: 0 0 4px; font-weight: 700; }
+  .panel .stepNum { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 700; margin-right: 8px; box-shadow: 0 1px 3px rgba(21,191,191,0.4); }
+  .hint { font-size: 12px; color: var(--text-dim); margin: 4px 0 12px; line-height: 1.6; }
+  .panelActions { margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .elapsed { font-size: 12px; font-weight: 700; color: var(--accent-text); background: var(--accent-soft); border: 1px solid var(--accent-soft-border); border-radius: 7px; padding: 4px 8px; }
+  .elapsed:empty { display: none; }
+  .elapsed.failed { color: #c0392b; background: #fdeaea; border-color: #f5c6c6; }
+  /* 레이어가 여러 겹이라 칸이 늘어나므로 자동 줄바꿈 그리드 */
+  /* 액세서리/신발 카드는 2단(사진|정보)이라 넓게. */
+  .specGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(640px, 1fr)); gap: 14px; align-items: start; }
+  /* 옷 카드는 세로 1열(종류→사진→뷰→설명→치수)이라 좁아도 됩니다. */
+  #specGrid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+  .specBodyCol { display: flex; flex-direction: column; gap: 8px; }
+  /* width:auto + max-width/max-height 둘 다 두면 종횡비를 유지한 채 상자 안에 맞춰집니다.
+     (max-height는 JS가 카드 가로폭×1.2로 지정) */
+  .specBodyCol .specOverlay { width: auto; height: auto; max-width: 100%; margin: 0; }
+  /* 왼쪽: 사진 + 실측(그 아래) / 오른쪽: 종류·설명. 실측 2열이 들어가야 해 왼쪽을 넓혔습니다. */
+  .specBody { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .specColLeft { min-width: 0; }
+  .specColLeft .specOverlay { max-width: 210px; }
+  /* 같은 옷의 다른 각도(뒤·옆) 뷰 스트립 */
+  .viewsWrap { margin: 8px 0; }
+  .viewsLabel { font-size: 11px; font-weight: 700; color: #3f4655; margin-bottom: 5px; }
+  .viewsStrip { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+  .viewThumb { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .viewThumb img { width: 48px; height: 48px; object-fit: cover; border-radius: 7px; border: 1px solid var(--border); cursor: zoom-in; display: block; background: #fff; }
+  .viewThumb .viewSplit { background: #fff; border: 1px solid var(--border); color: var(--accent-text); font-size: 9.5px; font-weight: 700; border-radius: 5px; padding: 1px 6px; cursor: pointer; line-height: 1.4; box-shadow: none; }
+  .viewThumb .viewSplit:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .mergeSelect { border: 1px solid var(--border); background: #fff; color: #3f4655; border-radius: 6px; padding: 3px 5px; font-size: 10.5px; font-weight: 700; cursor: pointer; font-family: inherit; max-width: 150px; }
+  .mergeSelect:hover { border-color: var(--accent); color: var(--accent-text); }
+  /* ---- 드래그 앤 드롭 정리 ---- */
+  .dndHint { font-size: 11.5px; color: var(--secondary-text); background: var(--accent-soft); border: 1px solid var(--accent-soft-border); border-radius: 8px; padding: 7px 10px; margin: 0 0 10px; line-height: 1.6; }
+  .dndHint b { color: var(--accent-text); }
+  .draggablePhoto { cursor: grab; }
+  .draggablePhoto:active { cursor: grabbing; }
+  /* 드래그 중인 동안 드롭 가능한 곳을 은은하게 안내 */
+  body.dndActive .specGrid > .specBox { outline: 1px dashed transparent; transition: outline-color 0.12s, box-shadow 0.12s; }
+  body.dndActive .specGrid > .specBox:not(.dropOver) { outline-color: var(--accent-soft-border); }
+  .specGrid > .specBox.dropOver { outline: 2px solid var(--accent) !important; box-shadow: 0 0 0 4px rgba(21,191,191,0.18); background: var(--accent-soft); }
+  .newGarmentZone { border: 2px dashed var(--border); border-radius: 12px; background: #fafbfc; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 120px; padding: 14px; color: var(--text-dim); font-size: 12px; font-weight: 700; line-height: 1.6; }
+  .newGarmentZone b { color: var(--accent-text); }
+  body.dndView .newGarmentZone { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+  .newGarmentZone.dropOver { border-color: var(--accent); background: #d8f3f1; box-shadow: 0 0 0 4px rgba(21,191,191,0.18); }
+  /* 겹침 순서 칩 바 */
+  #layerBar { display: flex; flex-direction: column; gap: 7px; margin: 0 0 12px; }
+  #layerBar:empty { display: none; }
+  .layerBarRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #f6f8fa; border: 1px solid var(--border); border-radius: 9px; padding: 7px 10px; }
+  .layerBarLabel { font-size: 11.5px; font-weight: 700; color: #3f4655; flex: 0 0 auto; }
+  .layerEnd { font-size: 10.5px; font-weight: 700; color: var(--text-dim); flex: 0 0 auto; }
+  .layerChips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; }
+  .layerChip { border: 1px solid var(--accent-soft-border); background: #fff; color: var(--accent-text); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: grab; user-select: none; box-shadow: 0 1px 3px rgba(40,50,70,0.08); }
+  .layerChip:active { cursor: grabbing; }
+  .layerChip.dragging { opacity: 0.4; }
+  .layerChip.chipOver { border-color: var(--accent); box-shadow: -3px 0 0 var(--accent); }
+  .viewThumb .del { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 1px solid var(--border); color: #e2483d; font-size: 11px; line-height: 1; cursor: pointer; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.15); font-weight: 700; }
+  .viewAdd { width: 48px; height: 48px; border: 1px dashed var(--accent); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--accent-text); background: var(--accent-soft); cursor: pointer; text-align: center; }
+  .viewAdd:hover { background: #d8f3f1; }
+  .viewAdd input { display: none; }
+  /* 실측 접기/펼치기 토글 */
+  .measToggle { width: 100%; text-align: left; background: #f3f5f8; color: #3f4655; border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: none; margin: 8px 0 0; }
+  .measToggle:hover { background: var(--accent-soft); color: var(--accent-text); }
+  .measWrap { margin-top: 8px; }
+  .specColRight { min-width: 0; }
+  /* 실측은 2열로 촘촘하게 항상 표시 */
+  .specRowsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 8px; }
+  @media (max-width: 1100px) {
+    .specGrid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .specBody { grid-template-columns: 1fr; }
+    .specRowsGrid { grid-template-columns: 1fr; }
+  }
+  .specBox { min-width: 0; }
+  /* 그리드 안의 옷/액세서리/신발 카드는 각각 테두리로 감싸 경계를 분명히 (모델 박스는 그리드 밖이라 제외) */
+  .specGrid > .specBox { border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 13px; background: #ffffff; box-shadow: 0 1px 5px rgba(40,50,70,0.05); transition: border-color 0.12s, box-shadow 0.12s; }
+  .specGrid > .specBox:hover { border-color: var(--accent-soft-border); box-shadow: 0 2px 10px rgba(21,191,191,0.10); }
+  .specGrid > .specBox.specBoxFolded { background: #fafbfc; }
+  .modelRows { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .modelRows .specRow { margin-bottom: 0; }
+  textarea { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 10px 11px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 13px; line-height: 1.55; color: var(--text); background: #fafbfc; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(21,191,191,0.12); }
+  input[type=number], input[type=text] { border: 1px solid var(--border); border-radius: 7px; padding: 7px 8px; font-size: 13px; color: var(--text); background: #fafbfc; width: 100%; font-family: -apple-system, "Segoe UI", sans-serif; }
+  input[type=number]:focus, input[type=text]:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(21,191,191,0.12); }
+  .specBoxPending { border-style: dashed; background: #fafbfc; }
+  .pendingThumb { display: block; width: 100%; max-width: 180px; border-radius: 8px; margin: 8px 0; cursor: pointer; }
+  .pendingNote { font-size: 12px; color: #8a8a99; line-height: 1.5; }
+  .subTitle { display: flex; align-items: center; gap: 10px; }
+  .foldAllBtn { font-weight: 700; }
+  .specBoxHead { cursor: pointer; user-select: none; }
+  .specBoxFolded .specBody, .specBoxFolded .specBodyCol { display: none; }
+  .specBoxFolded .instrGroupTitle { margin-bottom: 0; }
+  .specBoxHead .foldCaret { font-size: 11px; color: var(--text-dim); margin-right: 4px; }
+  .specSummary { font-size: 11.5px; color: var(--text-dim); font-weight: 600; margin-left: auto; margin-right: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .specBoxHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .reanalyzeBtn { border: 1px solid var(--accent); background: #fff; color: var(--accent-text); border-radius: 7px; padding: 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .reanalyzeBtn:hover:not(:disabled) { background: var(--accent); color: #fff; }
+  .reanalyzeBtn:disabled { opacity: 0.55; cursor: default; }
+  .layerMoveBtn { border: 1px solid var(--border); background: #fff; color: #3f4655; border-radius: 6px; padding: 4px 7px; font-size: 11.5px; font-weight: 700; cursor: pointer; box-shadow: none; white-space: nowrap; }
+  .layerMoveBtn:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+  .layerMoveBtn:disabled { opacity: 0.3; cursor: default; }
+  .cardDelBtn { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 7px; border: 1px solid #f0c9c9; background: #fff; color: #d63a2f; font-size: 16px; line-height: 1; font-weight: 700; cursor: pointer; padding: 0; box-shadow: none; }
+  .cardDelBtn:hover { background: #fdeaea; border-color: #e79a9a; }
+  .specDesc { margin-bottom: 10px; }
+  .specDesc textarea { min-height: 52px; font-family: -apple-system, "Segoe UI", sans-serif; font-size: 13px; line-height: 1.5; }
+  .descField { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; }
+  .descFieldLabel { flex: 0 0 68px; font-size: 12px; font-weight: 700; color: var(--accent-text); background: var(--accent-soft); border-radius: 6px; padding: 6px 7px; line-height: 1.3; }
+  .descField textarea { flex: 1 1 auto; min-width: 0; }
+  /* 옷 종류(AI 판정) 드롭다운 — 오판 시 사용자가 바꾸면 그 종류로 재분석 */
+  .catRow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--accent-soft); border: 1px solid var(--accent-soft-border); border-radius: 8px; }
+  .catLabel { font-size: 11.5px; font-weight: 700; color: var(--accent-text); white-space: nowrap; }
+  .catSelect { flex: 0 0 auto; font-size: 13px; font-weight: 700; color: var(--accent-text); border: 1px solid var(--accent); border-radius: 7px; padding: 5px 8px; background: #fff; font-family: -apple-system, "Segoe UI", sans-serif; cursor: pointer; }
+  .specTypeRow { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .specTypeInput { flex: 1 1 auto; min-width: 0; font-weight: 700; color: #222b36; }
+  .specSubLabel { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .descInclude { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #3f4655; margin-bottom: 8px; cursor: pointer; }
+  .descInclude input { accent-color: var(--accent); }
+  .specOverlay { width: 100%; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 0; cursor: zoom-in; display: block; background: #fff; }
+  .specRow { display: flex; gap: 5px; align-items: center; margin-bottom: 0; }
+  /* 라벨은 폭 고정 + 한 줄(접힘 방지). 값 시작 위치도 행마다 맞춰집니다. */
+  .specRowsGrid .specLabel { flex: 0 0 54px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; padding: 6px 4px; font-size: 11px; }
+  .specRowsGrid .specRow { gap: 4px; }
+  .specRowsGrid .specValue { flex: 0 0 46px; padding: 6px 5px; }
+  /* 2열이라 폭이 좁아 cm 글자는 감춥니다(모든 값이 cm). "AI 추정" 표시는 정보라서 유지) */
+  .specRowsGrid .specUnit { display: none; }
+  .specRowsGrid .aiTag { font-size: 9.5px; padding: 1px 3px; }
+  .specRowsGrid .lockBtn { padding: 4px 5px; font-size: 13px; }
+  .specLabel { flex: 1 1 auto; min-width: 0; font-size: 12px; font-weight: 700; color: #3f4655; background: #f3f5f8; border: 1px solid var(--border); border-radius: 7px; padding: 7px 8px; }
+  .specValue { flex: 0 0 74px; }
+  .specUnit { flex: 0 0 auto; font-size: 12px; color: var(--text-dim); }
+  input.unlinked { border-color: #f0c27a; background: #fff9f0; color: #8a6d3b; }
+  .aiTag { flex: 0 0 auto; font-size: 10px; font-weight: 700; color: var(--secondary-text); background: var(--secondary); border: 1px solid var(--border); border-radius: 5px; padding: 2px 5px; white-space: nowrap; }
+  .aiTag.hidden { visibility: hidden; }
+  .lockBtn { flex: 0 0 auto; background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; font-size: 14px; cursor: pointer; box-shadow: none; line-height: 1; }
+  .lockBtn:hover:not(.disabled) { background: var(--accent-soft); }
+  .lockBtn.locked { border-color: var(--accent-soft-border); }
+  .lockBtn.unlocked { border-color: #f0c27a; }
+  .lockBtn.disabled { opacity: 0.28; cursor: not-allowed; }
+  .specMasterLock { display: flex; align-items: center; gap: 8px; margin: 6px 0 8px; }
+  .specMasterLock button { background: transparent; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: none; color: #3f4655; }
+  .specMasterLock button:hover { background: var(--accent-soft); color: var(--accent-text); }
+  .specMasterLock .mlHint { font-size: 11px; color: var(--text-dim); }
+  .lockLegend { font-size: 11px; color: var(--text-dim); line-height: 1.6; margin: 2px 0 8px; }
+  /* 옷 / 액세서리 / 신발 — 각각 별도 영역, 같은 형식·같은 사진 크기 */
+  .subSection { margin-bottom: 18px; }
+  .subSection:last-of-type { margin-bottom: 0; }
+  .subSection.hidden { display: none; }
+  .subTitle { font-size: 13px; font-weight: 700; color: #222b36; border-left: 3px solid var(--accent); padding-left: 8px; margin: 0 0 10px; }
+  /* 액세서리 착용 방법 선택 (어깨/크로스/팔/손/백팩 …) */
+  .wearStyleRow { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .wearStyleRow .specLabel { margin-top: 3px; }
+  .wearStyleField { flex: 1 1 auto; min-width: 0; }
+  .wearStyleRow input.wearStyleInput { display: block; width: 100%; box-sizing: border-box; border: 1px solid var(--accent); border-radius: 7px; padding: 7px 8px; font-size: 13px; font-weight: 700; color: var(--accent-text); background: var(--accent-soft); font-family: -apple-system, "Segoe UI", sans-serif; }
+  .wearStyleRow input.wearStyleInput:focus { outline: none; background: #fff; }
+  .wearStyleHint { font-size: 11.5px; color: #8a8a99; margin: 5px 0 4px; }
+  .wearStyleChips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .wearStyleChip { border: 1px solid #dde1e8; background: #fff; border-radius: 999px; padding: 3px 9px; font-size: 12px; color: #5b6472; cursor: pointer; font-family: inherit; }
+  .wearStyleChip:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+  .wearStyleChip.on { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 700; }
+  .instrGroup { margin-bottom: 14px; }
+  .instrGroupTitle { font-size: 13px; font-weight: 700; color: var(--accent-text); background: var(--accent-soft); border: 1px solid var(--accent-soft-border); border-radius: 7px; padding: 5px 10px; margin: 0 0 8px; display: inline-block; }
+  .instrRow { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 7px; }
+  .instrCat { flex: 0 0 62px; font-size: 12px; font-weight: 700; color: #3f4655; background: #f3f5f8; border: 1px solid var(--border); border-radius: 7px; padding: 7px 6px; text-align: center; }
+  .instrText { flex: 1 1 auto; min-width: 0; font-family: -apple-system, "Segoe UI", sans-serif; font-size: 13px; line-height: 1.5; min-height: 0; overflow-y: hidden; }
+  .fitMap { border: 1px solid var(--accent-soft-border); border-radius: 10px; background: var(--accent-soft); padding: 10px 12px; margin-bottom: 12px; font-size: 12px; line-height: 1.6; }
+  .fitMap h3 { font-size: 12px; margin: 0 0 6px; color: var(--accent-text); font-weight: 700; }
+  .fitMap .ladder { color: var(--text-dim); margin-bottom: 8px; font-family: ui-monospace, Consolas, monospace; }
+  .fitMap .fmGarment { margin-bottom: 7px; }
+  .fitMap .fmType { font-weight: 700; color: #222b36; }
+  .fitMap .fmRow { color: var(--text); padding-left: 8px; }
+  .fitMap .fmRow b { color: var(--accent-text); font-weight: 700; }
+  .muted { color: var(--text-dim); font-size: 12px; }
+  #status { font-size: 13px; color: var(--accent-text); padding: 0 24px 6px; min-height: 16px; }
+  #resultWrap { --shot-h: 520px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin-top: 4px; }
+  #resultWrap:empty { display: none; }
+  #resultWrap .resultItem { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  #resultWrap img { height: var(--shot-h); width: auto; max-width: none; border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 3px 12px rgba(40,50,70,0.12); cursor: zoom-in; transition: transform 0.12s; }
+  #resultWrap img:hover { transform: scale(1.02); }
+  #resultWrap .resultLabel { font-size: 11px; color: var(--text-dim); text-align: center; }
+  #resultWrap .resultItem.failed .resultLabel { color: #c0392b; }
+  #resultWrap .pendingBox { height: var(--shot-h); width: calc(var(--shot-h) * 3 / 4); border-radius: 10px; border: 1px dashed var(--border); background: #eef1f5; display: flex; align-items: center; justify-content: center; }
+  .spinner { width: 22px; height: 22px; border: 3px solid #d9eeee; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #modalOverlay { display: none; position: fixed; inset: 0; background: rgba(30,40,55,0.55); align-items: center; justify-content: center; z-index: 100; cursor: zoom-out; }
+  #modalOverlay.show { display: flex; }
+  #modalOverlay img { max-width: 90vw; max-height: 90vh; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.35); }
+  /* ---- 체형 선택 (v2.7) ---- */
+  .bodyTypeSection { margin: 12px 0 4px; padding: 12px; border: 1px solid var(--accent-soft-border); border-radius: 12px; background: var(--accent-soft); }
+  .bodyTypeHead { font-size: 12.5px; font-weight: 700; color: var(--accent-text); margin-bottom: 9px; }
+  .bodyTypeHint { font-size: 11px; font-weight: 600; color: var(--secondary-text); }
+  .bodyTypeActions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .bodyPickBtn { background: #fff; color: var(--accent-text); border: 1px solid var(--accent); box-shadow: none; }
+  .bodyPickBtn:hover:not(:disabled) { background: var(--accent-soft); }
+  .selectedBodyLabel { font-size: 12px; font-weight: 700; color: #3f4655; }
+  .bodyTypeReshapeHint { font-size: 11px; font-weight: 600; color: var(--secondary-text); }
+  #reshapeHint.warn { color: #c0392b; }
+  /* 머리색 스와치 */
+  .hairColorRow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .colorSwatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border); cursor: pointer; padding: 0; font-size: 9px; font-weight: 700; color: #6b6b7b; box-sizing: border-box; }
+  .colorSwatch.keep { background: #fff; display: flex; align-items: center; justify-content: center; width: auto; min-width: 34px; border-radius: 13px; padding: 0 8px; }
+  .colorSwatch.selected { box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px rgba(21,191,191,0.25); transform: scale(1.08); }
+  /* 체형 카드 (모달 그리드 안) */
+  .bodyTypeCard { border: 2px solid var(--border); border-radius: 12px; background: #fff; cursor: pointer; padding: 8px 6px 9px; text-align: center; transition: border-color 0.12s, box-shadow 0.12s, background 0.12s; }
+  .bodyTypeCard:hover { border-color: var(--accent); background: #f7fefe; }
+  .bodyTypeCard.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(21,191,191,0.20); background: #f2fdfc; }
+  .bodyTypeCard svg { display: block; width: 100%; height: 130px; }
+  .bodyTypeCard .btName { font-size: 12px; font-weight: 700; color: #3f4655; margin-top: 6px; line-height: 1.3; }
+  .bodyTypeCard.selected .btName { color: var(--accent-text); }
+  /* 체형 선택 모달 */
+  .bodyModal { display: none; position: fixed; inset: 0; background: rgba(30,40,55,0.55); z-index: 120; align-items: center; justify-content: center; padding: 24px; }
+  .bodyModal.show { display: flex; }
+  .bodyModalPanel { background: var(--panel); border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.3); width: min(920px, 96vw); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+  .bodyModalHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 700; color: #222b36; }
+  .bodyModalClose { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: #3f4655; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: none; padding: 0; }
+  .bodyModalClose:hover { background: var(--secondary); }
+  .bodyModalGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 18px; overflow-y: auto; }
+  @media (max-width: 560px) { .bodyModalGrid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); } }
+  /* 재렌더 모델 기록 */
+  .reshapeResult { margin-top: 10px; }
+  .reshapeResultLabel { font-size: 11.5px; font-weight: 700; color: var(--accent-text); margin-bottom: 7px; }
+  .reshapeHistStrip { display: flex; gap: 9px; overflow-x: auto; padding: 2px 2px 6px; }
+  .reshapeHistCell { flex: 0 0 auto; width: 96px; border: 2px solid var(--border); border-radius: 10px; background: #fff; padding: 5px; text-align: center; }
+  .reshapeHistCell.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(21,191,191,0.18); background: #f2fdfc; }
+  .reshapeHistCell img { width: 100%; height: 110px; object-fit: cover; border-radius: 7px; background: #f4f6f8; cursor: zoom-in; display: block; }
+  .reshapeHistCap { font-size: 10.5px; font-weight: 700; color: #3f4655; margin: 4px 0 5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .reshapeHistUse { width: 100%; padding: 4px 0; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid var(--accent); background: #fff; color: var(--accent-text); cursor: pointer; box-shadow: none; }
+  .reshapeHistUse:hover:not(:disabled) { background: var(--accent-soft); }
+  .reshapeHistUse:disabled { border-color: var(--border); color: var(--text-dim); background: #f3f5f8; cursor: default; }
+  .reshapeHistCell.loading { border-style: dashed; border-color: var(--accent); background: #f2fdfc; }
+  .reshapeHistLoad { height: 110px; border-radius: 7px; background: #eef8f7; display: flex; align-items: center; justify-content: center; }
+  footer#usageFooter { margin-top: 24px; padding: 20px 24px 28px; background: var(--panel); border-top: 1px solid var(--border); }
+  footer#usageFooter h2 { font-size: 14px; color: #222b36; margin: 0 0 10px; font-weight: 700; }
+  footer#usageFooter .hint { max-width: 780px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="headTop">
+    <h1><span class="brandAccent">피팅샷</span> v2.7 에디터</h1>
+    <a class="navLink" href="/new25">← v2.5</a>
+    <a class="navLink" href="/new26">← v2.6</a>
+    <span class="muted" id="imageCountHint"></span>
+  </div>
+  <div class="upload" id="uploadArea"></div>
+</header>
+<div id="status"></div>
+<main>
+  <div class="workColumn">
+    <div class="panel">
+      <h2><span class="stepNum">1</span>모델 체형 분석</h2>
+      <p class="hint">모델 전신 사진에서 키·둘레·팔다리 길이를 추정합니다. 이 값이 신체 세로 사다리(어깨·허리·골반·무릎·발목 높이)의 기준이 됩니다. 직접 수정 가능합니다.</p>
+      <div class="panelActions"><button id="analyzeModelBtn" disabled>모델 체형 분석</button><span class="elapsed" id="modelElapsed"></span><label class="noInstrToggle"><input type="checkbox" id="showModelArrowsCheck" /> 사진 위 치수 화살표 표시</label></div>
+      <div class="specBox" id="modelSpecBox"></div>
+      <div id="bodyTypeSection" class="bodyTypeSection" style="display:none;">
+        <div class="bodyTypeHead">체형 · 헤어 선택 <span class="bodyTypeHint">— 체형·헤어스타일·머리색을 골라 [모델 재렌더]하면 그 스타일로 모델샷을 다시 만듭니다(얼굴·키 유지). 선택 안 한 항목은 원본 그대로.</span></div>
+        <div class="bodyTypeActions">
+          <button id="openBodyModalBtn" type="button" class="bodyPickBtn">체형 고르기 ▾</button>
+          <span id="selectedBodyLabel" class="selectedBodyLabel">현재 체형: 분석값(원본)</span>
+        </div>
+        <div class="bodyTypeActions">
+          <button id="openHairModalBtn" type="button" class="bodyPickBtn">헤어스타일 고르기 ▾</button>
+          <span id="hairLabel" class="selectedBodyLabel">헤어: 원본 유지</span>
+        </div>
+        <div class="bodyTypeActions">
+          <span class="analysisModelLabel">머리색</span>
+          <div id="hairColorRow" class="hairColorRow"></div>
+        </div>
+        <div class="bodyTypeActions">
+          <button id="reshapeBtn" type="button" disabled>선택 스타일로 모델 재렌더</button>
+          <span class="elapsed" id="reshapeElapsed"></span>
+          <span class="bodyTypeReshapeHint" id="reshapeHint"></span>
+        </div>
+        <div class="analysisModelRow">
+          <span class="analysisModelLabel">재렌더 엔진</span>
+          <label><input type="radio" name="reshapeEngine" value="gpt-image-2-high" checked /> GPT Image-2 (High · 2K)</label>
+          <label><input type="radio" name="reshapeEngine" value="gpt-image-2-medium" /> GPT Image-2 (Medium · 2K)</label>
+          <label><input type="radio" name="reshapeEngine" value="gemini" /> Gemini</label>
+        </div>
+        <div id="reshapeResult" class="reshapeResult" style="display:none;"></div>
+      </div>
+      <p class="hint" id="modelSpecPlaceholder">[모델 체형 분석]을 누르면 신체 실측이 항목별로 표시됩니다.</p>
+    </div>
+
+    <div class="panel">
+      <h2><span class="stepNum">2</span>옷 실측 분석 <span class="muted" style="font-weight:400;">— 레이어별 · 비율 잠금</span></h2>
+      <p class="hint">업로드한 옷을 <b>한 장씩 분석</b>하며 종류(상의·하의·원피스·세트)를 <b>자동 판정</b>합니다. 오판이면 카드의 [AI 판정 종류]로 바꾸면 됩니다. 사진의 절대 cm는 알 수 없지만 <b>비율</b>은 정확하므로, 🔒 잠긴 항목끼리는 픽셀 비율로 연동돼 아는 실측 하나만 고치면 나머지가 함께 재계산됩니다. 액세서리·신발은 실측 없이 <b>이름만</b> 인식합니다.<br /><b>같은 옷의 앞/뒤/옆 사진을 순서 상관없이 한꺼번에 올려도</b>, [옷 분석]이 같은 옷끼리 자동으로 묶어 대표+뷰로 정리합니다. 틀리게 묶였으면 카드의 <b>[합치기]</b> / 뷰의 <b>[분리]</b>로 바로잡을 수 있어요.</p>
+      <div class="panelActions">
+        <button id="analyzeBtn" disabled>옷 분석</button>
+        <span class="elapsed" id="garmentElapsed"></span>
+        <label class="noInstrToggle"><input type="checkbox" id="showArrowsCheck" /> 사진 위 치수 화살표 표시</label>
+      </div>
+      <div class="analysisModelRow">
+        <span class="analysisModelLabel">분석 모델</span>
+        <label><input type="radio" name="analysisModel" value="gemini-3.5-flash" /> Gemini 3.5 Flash</label>
+        <label><input type="radio" name="analysisModel" value="gpt-5.6-sol" /> GPT-5.6 Sol</label>
+        <label><input type="radio" name="analysisModel" value="gpt-5.6-terra" checked /> GPT-5.6 Terra</label>
+        <label><input type="radio" name="analysisModel" value="claude-fable-5" /> Claude Fable 5</label>
+        <label><input type="radio" name="analysisModel" value="claude-opus-4-8" /> Claude Opus 4.8</label>
+      </div>
+      <div class="lockLegend">🔒 잠김 = 비율 연동 · 🔓 풀림 = 독립 · "AI 추정" 태그 = 아직 AI가 추측한 초기값(고치거나 연동되면 사라짐)</div>
+      <div class="subSection" id="garmentSection">
+        <div class="subTitle">옷 (종류 자동판정)<button type="button" class="tinyBtn foldAllBtn" data-grid="specGrid">모두 접기</button></div>
+        <p class="dndHint">💡 <b>사진을 끌어서</b> 정리하세요 — 다른 옷 카드로 놓으면 <b>같은 옷(다른 각도)으로 합침</b>, 아래 <b>‘별도 옷’</b> 칸으로 놓으면 <b>분리</b>. 겹침 순서는 아래 칩을 좌우로 드래그.</p>
+        <div id="layerBar"></div>
+        <div class="specGrid" id="specGrid"></div>
+      </div>
+      <div class="subSection" id="accSection">
+        <div class="subTitle">액세서리<button type="button" class="tinyBtn foldAllBtn" data-grid="accGrid">모두 접기</button></div>
+        <div class="specGrid" id="accGrid"></div>
+      </div>
+      <div class="subSection" id="shoesSection">
+        <div class="subTitle">신발<button type="button" class="tinyBtn foldAllBtn" data-grid="shoesGrid">모두 접기</button></div>
+        <div class="specGrid" id="shoesGrid"></div>
+      </div>
+      <p class="hint" id="specPlaceholder">[옷 분석]을 누르면 옷의 각 겹, 액세서리, 신발이 각각의 영역에 같은 형식으로 표시됩니다.</p>
+    </div>
+
+    <div class="panelWide bottomRow">
+    <div class="panel">
+      <h2><span class="stepNum">3</span>핏 / 기장 지시사항</h2>
+      <p class="hint">코드가 <b>겹마다 착지점을 계산</b>하고 <b>겹침 관계</b>(어느 밑단이 더 아래라 무엇이 가려지는지)까지 판정합니다. 선택한 모델은 그 결과를 문장으로 옮기기만 하므로 산수 오류가 없습니다.</p>
+      <div class="analysisModelRow">
+        <span class="analysisModelLabel">핏 모델</span>
+        <label><input type="radio" name="fittingModel" value="gemini-3.5-flash" /> Gemini 3.5 Flash</label>
+        <label><input type="radio" name="fittingModel" value="gpt-5.6-sol" /> GPT-5.6 Sol</label>
+        <label><input type="radio" name="fittingModel" value="gpt-5.6-terra" checked /> GPT-5.6 Terra</label>
+        <label><input type="radio" name="fittingModel" value="claude-fable-5" /> Claude Fable 5</label>
+        <label><input type="radio" name="fittingModel" value="claude-opus-4-8" /> Claude Opus 4.8</label>
+      </div>
+      <div class="panelActions">
+        <button id="instructionsBtn" disabled>피팅 지시사항 생성</button>
+        <span class="elapsed" id="instrElapsed"></span>
+        <label class="noInstrToggle"><input type="checkbox" id="noInstrCheck" /> 핏 지시사항 없이 생성</label>
+      </div>
+      <div id="fitMapWrap"></div>
+      <div id="instructionsWrap"></div>
+      <p class="hint" id="instructionsPlaceholder">[피팅 지시사항 생성]을 누르면 옷별로 정리된, 편집 가능한 지시사항이 표시됩니다.</p>
+    </div>
+
+    <div class="panel">
+      <h2><span class="stepNum">4</span>피팅샷 생성</h2>
+      <p class="hint">모델 + 모든 옷 레이어 + 액세서리 + 신발을 함께 보내 합성합니다(prompt-25.txt). 이미지 역할표는 업로드 구성에 맞춰 자동 생성되며, 업로드하지 않은 슬롯은 아예 지시에 등장하지 않습니다(없는 걸 지어내지 않음).</p>
+      <div class="enginePicker">
+        <div class="engineHead">
+          <span>생성 모델 (복수 선택)</span>
+          <button id="engineAllBtn" class="tinyBtn" type="button">전체선택</button>
+        </div>
+        <div id="engineChecks" class="engineChecks"></div>
+      </div>
+      <div class="backToggle viewModeRow">
+        <b>피팅샷 뷰</b>
+        <label><input type="radio" name="viewMode" value="front" checked /> 앞면만 <span class="backToggleHint">(세로 1장)</span></label>
+        <label><input type="radio" name="viewMode" value="both" /> 앞·뒤 <span class="backToggleHint">(한 이미지 · 1:1 정사각)</span></label>
+        <label><input type="radio" name="viewMode" value="four" /> 앞·완전좌측·뒤·완전우측 <span class="backToggleHint">(한 이미지 · 16:9 가로)</span></label>
+      </div>
+      <div class="panelActions">
+        <button id="synthBtn" disabled>피팅샷 생성</button>
+        <button id="clearResultsBtn" class="secondary" disabled>초기화</button>
+      </div>
+      <div id="resultWrap"></div>
+    </div>
+    </div>
+  </div>
+</main>
+
+<footer id="usageFooter">
+  <h2>사용법 (v2.7 — 체형 선택 + 모델 재렌더)</h2>
+  <p class="hint">
+    v2.6(옷 종류 자동판정 · 자동 그룹핑 · 드래그 정리)에 <b>체형 선택</b>을 더한 실험 버전입니다.<br /><br />
+    <b>①</b> 모델 사진을 올려 [모델 체형 분석]을 하면, 아래에 <b>체형 카드</b>가 나타납니다. 원하는 체형을 고르면 <b>키·팔·다리(골격) 길이는 그대로</b> 두고 어깨·가슴·허리·엉덩이·몸무게만 그 체형에 맞게 바뀝니다.<br />
+    <b>②</b> [선택 체형으로 모델 재렌더]를 누르면 <b>그 체형으로 모델샷을 다시 생성</b>합니다(얼굴·포즈·배경 유지, 몸통 비율만 변경). 이 재렌더된 모델이 이후 피팅에 쓰입니다. 원본으로 되돌리기도 가능합니다.<br />
+    나머지(옷 자동판정·그룹핑·드래그 정리·핏·합성)는 v2.6과 동일합니다.
+  </p>
+</footer>
+
+<div id="modalOverlay"><img id="modalImg" alt="확대 이미지" /></div>
+<div id="bodyModal" class="bodyModal">
+  <div class="bodyModalPanel">
+    <div class="bodyModalHead"><span>체형 선택 — 원하는 체형을 고르세요 (키는 유지)</span><button id="bodyModalClose" class="bodyModalClose" type="button">✕</button></div>
+    <div id="bodyModalGrid" class="bodyModalGrid"></div>
+  </div>
+</div>
+<div id="hairModal" class="bodyModal">
+  <div class="bodyModalPanel">
+    <div class="bodyModalHead"><span>헤어스타일 선택 — 얼굴은 유지하고 머리만 바꿉니다 (색은 아래 스와치)</span><button id="hairModalClose" class="bodyModalClose" type="button">✕</button></div>
+    <div id="hairModalGrid" class="bodyModalGrid"></div>
+  </div>
+</div>
+<script src="new27.js"></script>
+</body>
+</html>

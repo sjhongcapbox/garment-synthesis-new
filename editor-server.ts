@@ -27,8 +27,9 @@ import { contourPointsFromAlpha } from './contour';
 import { runGarmentSynthesisTest, CONFIG as GARMENT_TEST_DEFAULTS } from './garment-test';
 import { buildPrompt, uploadImage, requestSynthesis, pollStatus, downloadResult } from './gcp-proxy';
 import { openaiSynthesize, tencentSynthesize, isTencentEngine, needsCompactPrompt } from './synth-providers';
-import { estimateGarmentLength, analyzeGarmentSpec, deriveFittingInstructions, formatGarmentSpecText, formatFittingInstructionsText, analyzeModelMeasurements, formatModelMeasurementsText } from './gemini-vision';
-import { buildFitMap } from './fit-mapper';
+import { estimateGarmentLength, analyzeGarmentSpec, analyzeGarmentAuto, groupGarments, deriveFittingInstructions, formatGarmentSpecText, formatFittingInstructionsText, analyzeModelMeasurements, formatModelMeasurementsText, classifyWornItem, GARMENT_ANALYSIS_27_PATH } from './gemini-vision';
+import type { GarmentCategory } from './gemini-vision';
+import { buildFitMap, buildFitMapLayered, buildFitMapAuto } from './fit-mapper';
 
 const PORT = 5177;
 const WORK_DIR = 'C:\\Users\\parra\\Downloads\\fitting';
@@ -89,6 +90,22 @@ const PROMPT_23_DRESS_COMPACT_PATH = path.join(__dirname, 'prompt-23-dress-compa
 const PROMPT_FITTING_24_PATH = path.join(__dirname, 'prompt-fitting-24.txt');
 const PROMPT_24_PATH = path.join(__dirname, 'prompt-24.txt');
 const PROMPT_24_DRESS_PATH = path.join(__dirname, 'prompt-24-dress.txt');
+// v2.5 전용: 레이어링(상의 3겹/하의 2겹) + 액세서리 + 신발. 최종 프롬프트는 [IMAGE n] 역할표를
+// 업로드 구성에 맞춰 동적 생성({imageManifest})하므로 상하의/원피스용 템플릿이 하나로 통합됩니다.
+const PROMPT_FITTING_25_PATH = path.join(__dirname, 'prompt-fitting-25.txt');
+const PROMPT_25_PATH = path.join(__dirname, 'prompt-25.txt');
+const PROMPT_FITTING_26_PATH = path.join(__dirname, 'prompt-fitting-26.txt');
+const PROMPT_26_PATH = path.join(__dirname, 'prompt-26.txt');
+// 방법1(뒷면 같이): 같은 모델을 한 이미지에 앞(좌)·뒤(우)로 렌더. 1:1 정사각으로 호출.
+const PROMPT_26_BOTH_PATH = path.join(__dirname, 'prompt-26-both.txt');
+// 4방향(앞·완전좌측·뒤·완전우측)을 한 이미지에 한 줄로 렌더. 16:9 가로로 호출.
+const PROMPT_26_FOUR_PATH = path.join(__dirname, 'prompt-26-four.txt');
+// v2.7: v2.6 복제 + 체형 선택(모델 재렌더). 프롬프트는 독립 파일로 두어 v2.6에 영향 없이 실험합니다.
+const PROMPT_FITTING_27_PATH = path.join(__dirname, 'prompt-fitting-27.txt');
+const PROMPT_27_PATH = path.join(__dirname, 'prompt-27.txt');
+const PROMPT_27_BOTH_PATH = path.join(__dirname, 'prompt-27-both.txt');
+const PROMPT_27_FOUR_PATH = path.join(__dirname, 'prompt-27-four.txt');
+const PROMPT_27_RESHAPE_PATH = path.join(__dirname, 'prompt-27-reshape.txt');
 const MODEL_MEASUREMENT_PATH = path.join(__dirname, 'measurement-model.txt');
 
 fs.mkdirSync(TMP_DIR, { recursive: true });
@@ -961,6 +978,394 @@ async function handleV24Synthesize(req: http.IncomingMessage, res: http.ServerRe
   sendJson(res, 200, { savedPaths, resultDataUrls, engine });
 }
 
+// ===== v2.5: 레이어링(상의 최대 3겹 / 하의 2겹) + 액세서리(2) + 신발(1) =====
+// v2.4와 계산 방식은 같지만, 슬롯마다 여러 벌을 배열로 받아 겹침 관계까지 코드가 판정하고,
+// 최종 프롬프트의 [IMAGE n] 역할표를 업로드 구성에 맞춰 동적으로 만들어 넣습니다.
+
+// 액세서리/신발 한 줄 분류 (실측 분석 없음)
+async function handleV25ClassifyItem(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  const body = await readJsonBody(req);
+  const kind: 'accessory' | 'shoes' = body.kind === 'shoes' ? 'shoes' : 'accessory';
+  const imagePath = saveDataUrlToTmp(body.image, `v25_${kind}`);
+  const item = await classifyWornItem(imagePath, kind, body.analysisModel);
+  sendJson(res, 200, { item });
+}
+
+// 핏 지시사항: 코드가 레이어별 착지점 + 겹침 관계를 계산 → 선택한 모델이 문장화.
+// v2.5(buildFitMapLayered)와 v2.6(buildFitMapAuto)이 프롬프트/빌더만 바꿔 공유합니다.
+type FitMapBuilder = typeof buildFitMapLayered;
+async function runLayeredFitting(
+  req: http.IncomingMessage, res: http.ServerResponse,
+  promptPath: string, builder: FitMapBuilder, tmpTag: string,
+): Promise<void> {
+  const body = await readJsonBody(req);
+  if (!body.modelSpec) throw new Error('모델 체형 실측(modelSpec)이 필요합니다. 먼저 [모델 체형 분석]을 실행하세요.');
+  const modelMeasurementsText = formatModelMeasurementsText(body.modelSpec);
+
+  // 옷 이미지는 정성적 맥락(드레이프/디테일)용으로만 함께 넘깁니다.
+  const imagePaths: string[] = [];
+  const pushImages = (arr: unknown, prefix: string) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach((d, i) => { if (typeof d === 'string') imagePaths.push(saveDataUrlToTmp(d, `${tmpTag}_ctx_${prefix}${i}`)); });
+  };
+  pushImages(body.topImages, 'top');
+  pushImages(body.bottomImages, 'bottom');
+  pushImages(body.dressImages, 'dress');
+
+  // 액세서리/신발은 {name, worn_on, measurements} 형태로 받아 스케일·걸리는 위치를 환산합니다.
+  const wornSpecs = (arr: unknown, kind: 'accessory' | 'shoes') =>
+    (Array.isArray(arr) ? arr : [])
+      .filter((x: any) => x && x.name)
+      .map((x: any) => ({ kind, name: x.name, worn_on: x.worn_on, wear_style: x.wear_style, measurements: x.measurements || [] }));
+
+  const fitMap = builder(body.modelSpec, {
+    tops: Array.isArray(body.topSpecs) ? body.topSpecs : [],
+    bottoms: Array.isArray(body.bottomSpecs) ? body.bottomSpecs : [],
+    dresses: Array.isArray(body.dressSpecs) ? body.dressSpecs : [],
+    accessories: wornSpecs(body.accessorySpecs, 'accessory'),
+    shoes: wornSpecs(body.shoesSpecs, 'shoes'),
+  });
+  const items = await deriveFittingInstructions({
+    modelMeasurementsText,
+    garmentMeasurementsText: fitMap.text,
+    imagePaths,
+    promptPath,
+    model: body.fittingModel,
+    // 실제 FIT MAP에 존재하는 겹 라벨만 골라, "이 문장이 어느 옷 이야기인지"를 enum으로 강제합니다.
+    layerLabels: fitMap.garments
+      .map((g) => g.layerLabel)
+      .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i),
+  });
+  sendJson(res, 200, { items, fitMap: { ladder: fitMap.ladder, garments: fitMap.garments, text: fitMap.text } });
+}
+
+async function handleV25FittingInstructions(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  await runLayeredFitting(req, res, PROMPT_FITTING_25_PATH, buildFitMapLayered, 'v25');
+}
+
+interface V25ImageEntry {
+  path: string;
+  role: string; // 매니페스트에 들어갈 역할 설명 (IMAGE 번호는 나중에 붙임)
+}
+
+// 업로드 구성에 맞춰 [IMAGE n] 역할표를 만듭니다. 없는 슬롯은 아예 등장하지 않으므로
+// 프롬프트가 "없는 것은 발명하지 말라"는 규칙과 자연스럽게 맞물립니다.
+function buildV25Manifest(entries: V25ImageEntry[]): string {
+  return entries.map((e, i) => `[IMAGE ${i + 1}]: ${e.role}`).join('\n');
+}
+
+// v2.5(prompt-25)와 v2.6(prompt-26)이 프롬프트만 바꿔 공유하는 레이어드 합성 핸들러.
+async function handleV25Synthesize(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  await runLayeredSynthesize(req, res, PROMPT_25_PATH);
+}
+async function runLayeredSynthesize(
+  req: http.IncomingMessage, res: http.ServerResponse, promptTemplatePath: string,
+  bothPromptPath: string = PROMPT_26_BOTH_PATH,
+  fourPromptPath: string = PROMPT_26_FOUR_PATH,
+): Promise<void> {
+  const body = await readJsonBody(req);
+  const entries: V25ImageEntry[] = [];
+
+  entries.push({
+    path: saveDataUrlToTmp(body.model, 'v25_model'),
+    role: "The 'Source Model'. Provides the fixed model identity (face, hair, body shape, proportions) AND the fixed pose. The background here MUST be completely removed. Any clothing and shoes visible on this model are the OLD outfit and must be fully replaced.",
+  });
+
+  const addGarments = (arr: unknown, slotLabel: string, prefix: string) => {
+    if (!Array.isArray(arr)) return;
+    const list = arr.filter((d) => typeof d === 'string') as string[];
+    list.forEach((dataUrl, i) => {
+      const layerNote = list.length > 1
+        ? ` LAYER ${i + 1} of ${list.length} (${i === 0 ? 'innermost — worn closest to the body' : i === list.length - 1 ? 'outermost — worn over all the other ' + slotLabel + ' layers' : 'middle layer'})`
+        : '';
+      entries.push({
+        path: saveDataUrlToTmp(dataUrl, `v25_${prefix}${i}`),
+        role: `${slotLabel.toUpperCase()} GARMENT${layerNote}. Extract and reproduce ONLY this garment's own fabric, color, pattern and construction. If it is shown on a hanger, mannequin, or an unrelated person, ignore all of that. This garment must appear in the output.`,
+      });
+    });
+  };
+  addGarments(body.topImages, 'top', 'top');
+  addGarments(body.bottomImages, 'bottom', 'bottom');
+  // 원피스 슬롯: 한 벌짜리 원피스이거나 상하의 세트일 수 있습니다(세트면 두 피스 모두 재현).
+  if (Array.isArray(body.dressImages)) {
+    const list = body.dressImages.filter((d: unknown) => typeof d === 'string') as string[];
+    list.forEach((dataUrl, i) => {
+      const layerNote = list.length > 1
+        ? ` LAYER ${i + 1} of ${list.length} (${i === 0 ? 'innermost' : i === list.length - 1 ? 'outermost — worn over the other layers' : 'middle layer'})`
+        : '';
+      entries.push({
+        path: saveDataUrlToTmp(dataUrl, `v25_dress${i}`),
+        role: `ONE-PIECE OUTFIT${layerNote} — either a single one-piece garment (dress, jumpsuit, overall) OR a matching top+bottom set presented together as one product. If it is a coordinated set, reproduce BOTH pieces in full — never drop one piece. Extract only the garment fabric; ignore any hanger, mannequin, or unrelated person.`,
+      });
+    });
+  }
+
+  // 액세서리 / 신발: 실측 없이 이름만 붙여 어떤 아이템인지 못박습니다.
+  const accNames: string[] = Array.isArray(body.accessoryNames) ? body.accessoryNames : [];
+  // 착용 방법(어깨/크로스/팔/손/백팩)은 스타일링 선택이라 반드시 지시대로 그려져야 합니다.
+  const accStyles: string[] = Array.isArray(body.accessoryStyles) ? body.accessoryStyles : [];
+  if (Array.isArray(body.accessoryImages)) {
+    (body.accessoryImages.filter((d: unknown) => typeof d === 'string') as string[]).forEach((dataUrl, i) => {
+      const named = accNames[i] ? ` — ${accNames[i]}` : '';
+      const styled = accStyles[i] ? ` Carry/wear it EXACTLY this way: ${accStyles[i]}.` : '';
+      entries.push({
+        path: saveDataUrlToTmp(dataUrl, `v25_acc${i}`),
+        role: `ACCESSORY${named}. The model MUST wear this accessory, placed where such an item is actually worn on the body.${styled} Reproduce its exact appearance from this image.`,
+      });
+    });
+  }
+  const shoeNames: string[] = Array.isArray(body.shoesNames) ? body.shoesNames : [];
+  if (Array.isArray(body.shoesImages)) {
+    (body.shoesImages.filter((d: unknown) => typeof d === 'string') as string[]).forEach((dataUrl, i) => {
+      const named = shoeNames[i] ? ` — ${shoeNames[i]}` : '';
+      entries.push({
+        path: saveDataUrlToTmp(dataUrl, `v25_shoes${i}`),
+        role: `FOOTWEAR${named}. The model MUST wear exactly these, reproduced faithfully from this image. Do not substitute a different style.`,
+      });
+    });
+  }
+
+  // 추가 뷰: 이미 위에 나온 옷의 다른 각도(뒤/옆). 새 옷이 아니라, 같은 옷을 정확히 그리기
+  // 위한 참고 이미지입니다. 매니페스트 끝에 붙여 레이어 번호를 흐트러뜨리지 않습니다.
+  const extraLabels: string[] = Array.isArray(body.extraViewLabels) ? body.extraViewLabels : [];
+  if (Array.isArray(body.extraViewImages)) {
+    (body.extraViewImages.filter((d: unknown) => typeof d === 'string') as string[]).forEach((dataUrl, i) => {
+      const of = extraLabels[i] ? ` of the garment already listed above: "${extraLabels[i]}"` : ' of a garment already listed above';
+      entries.push({
+        path: saveDataUrlToTmp(dataUrl, `v25_view${i}`),
+        role: `ADDITIONAL VIEW${of}. This is the SAME garment seen from another angle (back/side) — NOT a new or extra garment. Use it ONLY to reproduce that one garment's appearance accurately (e.g. its back print, side seams, sleeve construction). Do not add a second garment because of this image.`,
+      });
+    });
+  }
+
+  const fittingInstructions = body.noInstructions
+    ? '{}'
+    : Array.isArray(body.items)
+      ? formatFittingInstructionsText(body.items)
+      : (body.fittingInstructions || '');
+  // 옷 설명은 [포함하기]를 켠 항목만 넘어옵니다. 비어 있으면 외형은 사진만 보고 판단하게 합니다.
+  const descriptions: string[] = Array.isArray(body.garmentDescriptions)
+    ? body.garmentDescriptions.filter((s: unknown) => typeof s === 'string' && s.trim())
+    : [];
+  const garmentDescriptions = descriptions.length
+    ? descriptions.join('\n')
+    : '(제공된 설명 없음 — 각 옷의 외형은 해당 소스 사진만 보고 판단하세요.)';
+
+  // 신발 이미지가 없으면, 매니페스트(구체적 이미지 목록)에는 신발이 아예 없어서 이미지 모델이
+  // 일반 규칙(section 4)보다 목록을 우선시해 소스 모델의 신발을 그대로 남기는 경향이 있습니다.
+  // 그래서 "신발 없음 → 소스 신발 버리고 코디에 맞춰 새로 생성"을 구체 지시로 못박아 일반 규칙과 일치시킵니다.
+  const shoesProvided = Array.isArray(body.shoesImages)
+    && body.shoesImages.some((d: unknown) => typeof d === 'string');
+  let imageManifest = buildV25Manifest(entries);
+  if (!shoesProvided) {
+    imageManifest += `\n\n[FOOTWEAR — no shoes image was uploaded]: This is intentional, not a missing slot. The shoes on the Source Model belong to the OLD outfit and must NOT be kept, copied, or left in place. Following rule 4 (Footwear), CHOOSE and render brand-new footwear that harmonizes with this outfit — an understated, current-trend style (it need not match the garment colors) — appropriate to the garments and their lengths, sitting correctly on the feet at the FITTING SPECIFICATIONS' ankle landmark. The model MUST end up wearing these newly chosen shoes, never the originals from the Source Model image.`;
+  }
+
+  // 뷰 모드: 'front'(기본, 앞면만) / 'both'(앞·뒤 1:1) / 'four'(앞·완전좌·뒤·완전우 16:9).
+  // 하위호환: 예전 프론트는 includeBack=true만 보냈으므로 그 경우 'both'로 취급합니다.
+  const viewMode: 'front' | 'both' | 'four' =
+    body.viewMode === 'four' ? 'four'
+    : (body.viewMode === 'both' || body.includeBack === true) ? 'both'
+    : 'front';
+  const wantBackBoth = viewMode === 'both';
+  const wantFour = viewMode === 'four';
+  const effectivePromptPath = wantFour ? fourPromptPath : wantBackBoth ? bothPromptPath : promptTemplatePath;
+
+  const template = fs.readFileSync(effectivePromptPath, 'utf-8');
+  const prompt = template
+    .replace(/\{imageManifest\}/g, imageManifest)
+    .replace(/\{garmentDescriptions\}/g, garmentDescriptions)
+    .replace(/\{fittingInstructions\}/g, fittingInstructions);
+
+  const localPaths = entries.map((e) => e.path);
+  const engine: string = body.engine || 'gpt-image-2-medium';
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const safeEngine = engine.replace(/[^a-z0-9.-]/gi, '_');
+  const savedPaths: string[] = [];
+
+  if (engine.startsWith('gpt-image-2')) {
+    // 엔진 키로 quality/size 결정. Medium은 커스텀 해상도 2종으로 분기(2K/1K).
+    // gpt-image-2-medium-2k → 1536x2752, gpt-image-2-medium-1k → 768x1376.
+    const quality: 'medium' | 'high' = engine.includes('-medium') ? 'medium' : 'high';
+    // 뷰 모드별 캔버스 종횡비:
+    //  - four: 네 인물이 한 줄로 들어가도록 16:9 가로(긴 변=해상도 등급의 긴 변, 짧은 변은 그 9/16).
+    //  - both: 두 인물이 나란히 들어가도록 1:1 정사각(한 변=해상도 등급의 긴 변).
+    //  - front: 한 인물 세로 전신(9:16 계열).
+    const size = wantFour
+      ? (engine.endsWith('-2k') ? '2752x1536' : engine.endsWith('-1k') ? '1376x768' : '1536x864')
+      : wantBackBoth
+      ? (engine.endsWith('-2k') ? '2752x2752' : engine.endsWith('-1k') ? '1376x1376' : '1536x1536')
+      : (engine.endsWith('-2k') ? '1536x2752'
+        : engine.endsWith('-1k') ? '768x1376'
+        : undefined); // 기본값(1024x1536)은 openaiSynthesize가 채웁니다.
+    const buffer = await openaiSynthesize({ imagePaths: localPaths, prompt, quality, size });
+    const outPath = path.join(OUTPUT_DIR, `v25_fitting_${safeEngine}_${timestamp}_1.png`);
+    fs.writeFileSync(outPath, buffer);
+    savedPaths.push(outPath);
+  } else if (isTencentEngine(engine)) {
+    const smallPaths = await Promise.all(
+      localPaths.map(async (p, i) => {
+        const outPath = path.join(TMP_DIR, `v25_tc_${timestamp}_${i}.jpg`);
+        await sharp(p).rotate().resize(1280, 1280, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 82 }).toFile(outPath);
+        return outPath;
+      }),
+    );
+    const imageUrls = await Promise.all(smallPaths.map((p) => uploadImage(p)));
+    const resultUrl = await tencentSynthesize({ engine, prompt, imageUrls });
+    const outPath = path.join(OUTPUT_DIR, `v25_fitting_${safeEngine}_${timestamp}_1.png`);
+    await downloadResult(resultUrl, outPath);
+    savedPaths.push(outPath);
+  } else {
+    const imageUrls = await Promise.all(localPaths.map((p) => uploadImage(p)));
+    const job = await requestSynthesis({
+      prompt,
+      images: imageUrls,
+      // four=16:9 가로(4방향 한 줄), both=1:1(앞·뒤), 그 외 기본값(Gemini 등 GCP 경로).
+      aspectRatio: wantFour ? '16:9' : wantBackBoth ? '1:1' : GARMENT_TEST_DEFAULTS.aspectRatio,
+      imageSize: GARMENT_TEST_DEFAULTS.imageSize,
+      model: GARMENT_TEST_DEFAULTS.model,
+    });
+    const result = await pollStatus(job.job_id);
+    const resultUrls = result.result_urls?.length ? result.result_urls : result.result_url ? [result.result_url] : [];
+    if (resultUrls.length === 0) throw new Error(`완료되었지만 결과 URL이 없습니다: ${JSON.stringify(result)}`);
+    for (let i = 0; i < resultUrls.length; i++) {
+      const outPath = path.join(OUTPUT_DIR, `v25_fitting_${safeEngine}_${timestamp}_${i + 1}.png`);
+      // eslint-disable-next-line no-await-in-loop
+      await downloadResult(resultUrls[i], outPath);
+      savedPaths.push(outPath);
+    }
+  }
+
+  const resultDataUrls = await Promise.all(savedPaths.map((p) => fileToDataUrl(p)));
+  sendJson(res, 200, { savedPaths, resultDataUrls, engine, imageCount: localPaths.length });
+}
+
+// ===== v2.6: 슬롯 선택 없이 아무 옷이나 올리면 종류를 자동 판정 =====
+// 분석은 옷 한 장씩 auto 분류(상의/하의/원피스/세트)로 처리하고, 나머지(핏/합성)는
+// v2.5의 레이어드 로직을 프롬프트/빌더만 바꿔 재사용합니다.
+async function handleV26AnalyzeGarment(
+  req: http.IncomingMessage, res: http.ServerResponse, promptPath?: string,
+): Promise<void> {
+  const body = await readJsonBody(req);
+  if (typeof body.garment !== 'string') throw new Error('garment 이미지(dataURL)가 필요합니다.');
+  const imagePath = saveDataUrlToTmp(body.garment, 'v26_garment');
+  const forced: GarmentCategory | undefined =
+    body.forcedCategory === 'top' || body.forcedCategory === 'bottom' ||
+    body.forcedCategory === 'dress' || body.forcedCategory === 'set'
+      ? body.forcedCategory : undefined;
+  const spec = await analyzeGarmentAuto(imagePath, body.analysisModel, forced, promptPath);
+  sendJson(res, 200, { spec });
+}
+
+// v2.7 옷 자동분석: v2.6과 동일 로직이되, 분석 프롬프트만 -27로 격리(이후 v2.7만 따로 튜닝 가능).
+async function handleV27AnalyzeGarment(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  await handleV26AnalyzeGarment(req, res, GARMENT_ANALYSIS_27_PATH);
+}
+
+// 자동 그룹핑: 여러 옷 사진 중 "같은 실물 옷의 다른 각도"끼리 묶어 대표+뷰 구조를 돌려줍니다.
+async function handleV26GroupGarments(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  const body = await readJsonBody(req);
+  const images: string[] = Array.isArray(body.images) ? body.images.filter((x: unknown) => typeof x === 'string') : [];
+  if (images.length < 2) {
+    // 1장 이하면 그룹핑할 것이 없습니다 — 각 사진을 단독 그룹으로 그대로 반환.
+    sendJson(res, 200, { groups: images.map((_, i) => ({ representative_index: i, view_indices: [], category: 'top', reason: '' })) });
+    return;
+  }
+  const paths = images.map((d, i) => saveDataUrlToTmp(d, `v26_group_${i}`));
+  const groups = await groupGarments(paths, body.analysisModel);
+  sendJson(res, 200, { groups });
+}
+
+async function handleV26FittingInstructions(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  await runLayeredFitting(req, res, PROMPT_FITTING_26_PATH, buildFitMapAuto, 'v26');
+}
+
+async function handleV26Synthesize(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  await runLayeredSynthesize(req, res, PROMPT_26_PATH);
+}
+
+// ===== v2.7: v2.6 + 체형 선택(모델 재렌더) =====
+// 옷 분석/그룹핑/분류는 v2.6과 동일 로직이라 라우팅에서 v2.6 핸들러를 재사용하고,
+// 핏/합성만 -27 프롬프트로 돌립니다. 새 기능은 아래 handleV27Reshape(모델 체형 재렌더)입니다.
+async function handleV27FittingInstructions(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  await runLayeredFitting(req, res, PROMPT_FITTING_27_PATH, buildFitMapAuto, 'v27');
+}
+
+async function handleV27Synthesize(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  await runLayeredSynthesize(req, res, PROMPT_27_PATH, PROMPT_27_BOTH_PATH, PROMPT_27_FOUR_PATH);
+}
+
+// 선택한 체형으로 모델샷을 다시 렌더합니다(얼굴·키·포즈·배경 유지, 몸통 비율만 변경).
+// 결과 이미지가 이후 피팅의 모델 입력으로 쓰입니다.
+async function handleV27Reshape(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  const body = await readJsonBody(req);
+  if (typeof body.model !== 'string') throw new Error('모델 이미지(model dataURL)가 필요합니다.');
+  const modelPath = saveDataUrlToTmp(body.model, 'v27_reshape_src');
+  const desc: string = typeof body.bodyTypeDescription === 'string' && body.bodyTypeDescription.trim()
+    ? body.bodyTypeDescription.trim() : '표준 체형';
+  const meas: string = typeof body.targetMeasurements === 'string' ? body.targetMeasurements : '';
+  // 헤어: 스타일/색상 중 하나라도 지정되면 그 스타일로 변경, 아니면 원본 유지.
+  const hairStyle: string = typeof body.hairDescription === 'string' ? body.hairDescription.trim() : '';
+  const hairColor: string = typeof body.hairColor === 'string' ? body.hairColor.trim() : '';
+  let hairInstruction: string;
+  if (hairStyle || hairColor) {
+    const parts: string[] = [];
+    if (hairStyle) parts.push(`Restyle the hair to this hairstyle: ${hairStyle}.`);
+    if (hairColor) parts.push(`Hair colour: ${hairColor}.`);
+    hairInstruction = `Change the hair as specified. ${parts.join(' ')} Render this new hairstyle naturally framing the SAME face — keep the face, facial features, and identity 100% unchanged; only the hair (shape, length, and/or colour) changes. Make the hairstyle look realistic and consistent with the lighting.`;
+  } else {
+    hairInstruction = 'Keep the original hairstyle, hair length, and hair colour exactly as in the source image. Do not restyle or recolour the hair.';
+  }
+  // 재렌더가 잘 먹으려면 절대 치수보다 "원본 대비 무엇을 얼마나 바꿀지"가 결정적입니다.
+  // 클라이언트가 방향+강도 지시문을 만들어 보내며, 없으면 중립 문장으로 대체합니다.
+  const bodyChangeInstruction: string =
+    typeof body.bodyChangeInstruction === 'string' && body.bodyChangeInstruction.trim()
+      ? body.bodyChangeInstruction.trim()
+      : 'Reshape the body so that its overall proportions match the TARGET BODY TYPE and TARGET MEASUREMENTS above, changing the silhouette clearly from the source where they differ.';
+  const template = fs.readFileSync(PROMPT_27_RESHAPE_PATH, 'utf-8');
+  const prompt = template
+    .replace(/\{bodyTypeDescription\}/g, desc)
+    .replace(/\{targetMeasurements\}/g, meas)
+    .replace(/\{bodyChangeInstruction\}/g, bodyChangeInstruction)
+    .replace(/\{hairInstruction\}/g, hairInstruction);
+
+  const engine: string = body.engine || 'gpt-image-2-high';
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const safeEngine = engine.replace(/[^a-z0-9.-]/gi, '_');
+  let outPath: string;
+  if (engine.startsWith('gpt-image-2')) {
+    const quality: 'medium' | 'high' = engine.includes('-medium') ? 'medium' : 'high';
+    // GPT 재렌더는 2K 고정(1536x2752). 모델 전신샷을 충분한 해상도로 재현합니다.
+    const buffer = await openaiSynthesize({ imagePaths: [modelPath], prompt, quality, size: '1536x2752' });
+    outPath = path.join(OUTPUT_DIR, `v27_reshape_${safeEngine}_${timestamp}.png`);
+    fs.writeFileSync(outPath, buffer);
+  } else if (isTencentEngine(engine)) {
+    const small = path.join(TMP_DIR, `v27_reshape_tc_${timestamp}.jpg`);
+    await sharp(modelPath).rotate().resize(1280, 1280, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 82 }).toFile(small);
+    const url = await uploadImage(small);
+    const resultUrl = await tencentSynthesize({ engine, prompt, imageUrls: [url] });
+    outPath = path.join(OUTPUT_DIR, `v27_reshape_${safeEngine}_${timestamp}.png`);
+    await downloadResult(resultUrl, outPath);
+  } else {
+    const url = await uploadImage(modelPath);
+    const job = await requestSynthesis({
+      prompt, images: [url],
+      aspectRatio: GARMENT_TEST_DEFAULTS.aspectRatio,
+      imageSize: GARMENT_TEST_DEFAULTS.imageSize,
+      model: GARMENT_TEST_DEFAULTS.model,
+    });
+    const result = await pollStatus(job.job_id);
+    const resultUrls = result.result_urls?.length ? result.result_urls : result.result_url ? [result.result_url] : [];
+    if (!resultUrls.length) throw new Error(`완료되었지만 결과 URL이 없습니다: ${JSON.stringify(result)}`);
+    outPath = path.join(OUTPUT_DIR, `v27_reshape_${safeEngine}_${timestamp}.png`);
+    await downloadResult(resultUrls[0], outPath);
+  }
+  const resultDataUrl = await fileToDataUrl(outPath);
+  sendJson(res, 200, { resultDataUrl, savedPath: outPath, engine });
+}
+
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -976,6 +1381,9 @@ function serveStatic(req: http.IncomingMessage, res: http.ServerResponse): void 
     req.url === '/new2' ? '/new2.html' :
     req.url === '/new23' ? '/new23.html' :
     req.url === '/new24' ? '/new24.html' :
+    req.url === '/new25' ? '/new25.html' :
+    req.url === '/new26' ? '/new26.html' :
+    req.url === '/new27' ? '/new27.html' :
     (req.url || '/editor.html');
   const filePath = path.join(PUBLIC_DIR, urlPath);
   if (!filePath.startsWith(PUBLIC_DIR) || !fs.existsSync(filePath)) {
@@ -1053,6 +1461,64 @@ const server = http.createServer((req, res) => {
     }
     if (req.method === 'POST' && req.url === '/api/v24/synthesize') {
       await handleV24Synthesize(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v25/classify-item') {
+      await handleV25ClassifyItem(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v25/fitting-instructions') {
+      await handleV25FittingInstructions(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v25/synthesize') {
+      await handleV25Synthesize(req, res);
+      return;
+    }
+    // v2.6: 옷 종류 자동 판정. 액세서리/신발 분류는 v2.5와 동일하므로 그대로 재사용.
+    if (req.method === 'POST' && req.url === '/api/v26/analyze-garment') {
+      await handleV26AnalyzeGarment(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v26/classify-item') {
+      await handleV25ClassifyItem(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v26/group-garments') {
+      await handleV26GroupGarments(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v26/fitting-instructions') {
+      await handleV26FittingInstructions(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v26/synthesize') {
+      await handleV26Synthesize(req, res);
+      return;
+    }
+    // v2.7: 그룹핑/분류는 v2.6·v2.5 핸들러 재사용, 옷 분석은 -27 프롬프트로 격리, 핏/합성은 -27, +체형 재렌더(reshape).
+    if (req.method === 'POST' && req.url === '/api/v27/analyze-garment') {
+      await handleV27AnalyzeGarment(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v27/classify-item') {
+      await handleV25ClassifyItem(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v27/group-garments') {
+      await handleV26GroupGarments(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v27/reshape-model') {
+      await handleV27Reshape(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v27/fitting-instructions') {
+      await handleV27FittingInstructions(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v27/synthesize') {
+      await handleV27Synthesize(req, res);
       return;
     }
     // 더미는 절대 안 바뀌니 페이지 로드 시점에 바로 캔버스에 띄울 수 있도록 정적 경로로도

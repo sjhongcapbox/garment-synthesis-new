@@ -1,0 +1,26 @@
+You are given {count} garment product photos, provided in order and numbered 0, 1, 2, … up to {count}-1 (photo 0 is the FIRST image given, photo 1 the second, and so on).
+
+Your job: decide which of these photos show the SAME single physical garment from different angles, and which show DIFFERENT garments. Then output one group per distinct physical garment.
+
+WHAT COUNTS AS THE SAME GARMENT:
+- The same one piece of clothing photographed from another angle — e.g. a front view and a back view of the same shirt, or a front, back and side of the same pair of pants — is ONE garment. Group those photo indices together.
+- Judge sameness by continuity of fabric, exact colour, material, silhouette, and construction — not by whether the two photos look identical. The front of a garment can look quite different from its back (a plain front but a large back print; a plain back but a graphic front). If the fabric, colour, and cut clearly continue around the same body, they are the same garment.
+- Small differences in lighting, zoom, cropping, wrinkling, or the mannequin/model pose do NOT make it a different garment.
+
+WHAT COUNTS AS DIFFERENT GARMENTS:
+- A different colour or colourway of an otherwise similar style is a DIFFERENT garment.
+- A clearly different style, cut, length, or garment type is a different garment.
+- An upper-body piece and a lower-body piece are different garments (unless a single photo shows a matching top+bottom set worn together — then that one photo is a "set").
+- When you are unsure whether two photos are the same physical garment, keep them as SEPARATE garments. It is safer to under-merge (the user can merge manually) than to wrongly fuse two different garments into one.
+
+FOR EACH GROUP, provide:
+- representative_index: the photo that best shows this garment as a clear, complete FRONT view — this becomes the main reference. If there is no obvious front view, pick the most complete, least cropped, most front-facing photo.
+- view_indices: the indices of the OTHER photos in this same group (the additional back/side/detail angles). Leave it empty if this garment has only one photo.
+- category: "top" (upper-body: shirt, tee, knit, jacket, coat, cardigan), "bottom" (pants, skirt, shorts), "dress" (a single one-piece covering torso and legs — dress, jumpsuit, overall), or "set" (ONE photo showing a matching top AND bottom together as one coordinated product). Judge by what the representative photo actually shows.
+- reason: a very short Korean note — for a multi-photo group say why they are the same garment (e.g. "같은 셔츠 앞/뒤"); for a single-photo group just name the garment (e.g. "청바지").
+
+HARD REQUIREMENTS:
+- Every photo index from 0 to {count}-1 must appear EXACTLY ONCE across the whole output — either as some group's representative_index or inside exactly one group's view_indices. Never drop an index, never repeat an index.
+- Do not invent indices outside the range 0…{count}-1.
+
+Return ONLY the JSON matching the schema.

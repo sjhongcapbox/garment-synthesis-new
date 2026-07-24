@@ -8,13 +8,26 @@ The FIT MAP is the single authoritative source. Every landing point and ease gra
 The photo(s), if provided, are ONLY for qualitative texture the fit map cannot carry: fabric drape (stiff vs. flowy), construction details (gathers, pleats, darts, slits, cuffs), print/logo, collar/neckline style. Use them for surface description, never for position or fit — those come from the fit map alone.
 
 === HOW TO WRITE EACH INSTRUCTION ===
-Write EVERY fitting instruction in natural Korean (한국어). Take each fit-map line and phrase it as one concrete, visual, body-landmark sentence an artist can literally draw. Keep the precise landmark from the fit map, but make it read naturally.
+Write EVERY fitting instruction in natural Korean (한국어). Take each fit-map line and phrase it as one concrete, visual, body-landmark sentence an artist can literally draw.
+
+BE MAXIMALLY SPECIFIC — this is the single most important quality bar. Vague instructions produce wrong images. Follow these rules:
+
+1. CARRY THE FULL LANDMARK — never compress it. The fit map's landmark phrase is precise on purpose; keep ALL of its detail (the region, the sub-position, and any qualifier like "매우 짧음", "약 1/3 지점", "바로 아래"). Summarizing "허벅지 최상단(사타구니 바로 아래, 매우 짧음)" down to "허벅지 상단" throws away exactly the information the artist needs. Losing detail is the worst failure mode here.
+2. INCLUDE THE BODY-RELATIVE DISTANCE. When the fit map gives a distance from a landmark (e.g. "사타구니에서 아래로 약 9cm", "무릎에서 위로 약 6cm"), put that number in your sentence. It is drawable and it pins the position exactly.
+3. INCLUDE THE GAP for fit/ease items. When the fit map says how far the garment floats off the body (e.g. "옷이 몸 표면에서 사방으로 약 2.5cm 떠서 흐름"), state it. "여유롭게 떨어진다"에 그치지 말고 얼마나 뜨는지 말하세요.
+4. DESCRIBE THE VISIBLE CONSEQUENCE — where the fabric touches the body vs. floats free, whether the side seam hangs straight down or follows the body's curve, where folds gather. The artist draws the outline, so tell them what the outline does.
+5. NEVER use a vague adverb as the only descriptor. 적당히 / 살짝 / 자연스럽게 / 여유롭게 alone are forbidden — each must be paired with a concrete landmark or number.
+6. DO NOT state the absolute floor height ("바닥에서 약 73cm"). That number is for internal verification only and means nothing to an artist. Use the body-relative landmark and distance instead.
+7. Keep each item to ONE or TWO sentences, but pack them with the specifics above — density over length. Do not pad with style adjectives.
+
 Worked examples (fit-map line → your Korean sentence):
-- "밑단 착지: 무릎 아래·종아리 상단 약 1/3 지점 (바닥에서 약 32cm)" → "밑단이 무릎을 확실히 지나 종아리 상단(무릎에서 발목으로 약 1/3 내려온 지점)에서 끝납니다."
-- "소매 끝: 손목을 지나 손등을 덮음(약 3cm 오버)" → "소매가 손목을 약 3cm 지나 손등 위쪽을 살짝 덮습니다."
-- "가슴 둘레 72 vs 몸 78 = -6cm → 밀착(신축 소재 전제)" → "가슴은 몸에 밀착되어, 신축성 있는 소재가 몸의 곡선을 따라 붙습니다."
-- "엉덩이 둘레 108 vs 몸 84 = +24cm → 오버사이즈/와이드" → "엉덩이 둘레가 넉넉해 몸에 닿지 않고 풍성하게 떨어지는 와이드 실루엣입니다."
-- "폭 사다리(엉덩이54→허벅지35→밑단부리28) → 허벅지에서 부풀었다 밑단으로 좁아지는 테이퍼드/배럴" → "엉덩이·허벅지에서 풍성하게 부풀었다가 밑단으로 갈수록 확 좁아지는 테이퍼드(배럴) 실루엣입니다."
+- "밑단 착지: 무릎 아래·종아리 상단 약 1/3 지점 — 무릎에서 아래로 약 6cm" → "밑단이 무릎뼈를 지나 그 아래로 약 6cm 내려온, 종아리 상단 1/3 지점에서 끝납니다."
+- "밑단 착지: 허벅지 최상단(사타구니 바로 아래, 매우 짧음) — 사타구니에서 아래로 약 4cm" → "밑단이 사타구니에서 겨우 4cm 내려온 허벅지 최상단에서 끝나는, 매우 짧은 기장입니다."
+- "소매 끝: 손목을 지나 손등을 덮음(약 3cm 오버)" → "소매가 손목뼈를 약 3cm 지나 손등 위쪽 1/3을 덮습니다."
+- "가슴 둘레 95 vs 몸 78 = +17cm → 루즈 · 옷이 몸 표면에서 사방으로 약 2.5cm 떠서 흐름" → "가슴 둘레가 넉넉해 옷이 몸에서 사방으로 약 2.5cm 떠 있고, 옆선이 가슴에서 밑단까지 몸에 닿지 않고 수직으로 곧게 떨어집니다."
+- "가슴 둘레 72 vs 몸 78 = -6cm → 밀착 · 몸에 밀착되어 눌림" → "가슴은 신축 소재가 몸에 완전히 밀착되어, 가슴과 허리의 곡선이 옷 위로 그대로 드러납니다."
+- "어깨: 옷 어깨 39.5 vs 몸 어깨 37 = +2.5cm → 어깨선이 어깨 끝을 넘어감(드롭숄더)" → "어깨 봉제선이 실제 어깨 끝점보다 약 1.2cm 바깥, 팔 윗면에 얹혀 떨어지는 드롭숄더입니다."
+- "폭 사다리(엉덩이54→허벅지35→밑단부리28) → 허벅지에서 부풀었다 밑단으로 좁아지는 테이퍼드/배럴" → "엉덩이와 허벅지에서 풍성하게 부풀었다가 무릎 아래부터 급격히 좁아져 밑단에서 발목 쪽으로 붙는 테이퍼드(배럴) 실루엣입니다."
 
 === LAYERING — describe the VISIBLE END STATE (Critical) ===
 If the fit map has a LAYERING line, translate it into what is COVERED and what is EXPOSED on the body — never a styling action (an artist cannot draw "빼서 연출합니다"; they can draw "가려져 보이지 않는다").
